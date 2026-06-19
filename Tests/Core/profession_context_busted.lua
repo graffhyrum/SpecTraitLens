@@ -420,4 +420,208 @@ describe("Controller standalone profession switch", function()
 			assert.are.equal(2871, pl.Controller:GetContext().skillLineID)
 		end)
 	end)
+
+	it("switches expansion specs within the same parent profession", function()
+		local pl = load_addon.pl()
+		local activeChild = 2911
+		local configs = { [2911] = 111, [2801] = 101 }
+		local tabs = {
+			[2911] = { 501 },
+			[2801] = { 502 },
+		}
+		local tabInfo = {
+			[501] = { rootNodeID = 601, name = "Midnight Eng Spec", description = "" },
+			[502] = { rootNodeID = 602, name = "Dragon Eng Spec", description = "" },
+		}
+
+		_G.GetProfessions = function()
+			return 1
+		end
+		_G.GetProfessionInfo = function()
+			return "Engineering", nil, 1, 100, 0, 0, 202
+		end
+		_G.ProfessionsFrame = {
+			GetProfessionInfo = function()
+				return { professionID = activeChild }
+			end,
+		}
+		_G.C_TradeSkillUI.GetAllProfessionTradeSkillLines = function()
+			return { 2911, 2801 }
+		end
+		_G.C_TradeSkillUI.GetChildProfessionInfo = function()
+			return { professionID = activeChild }
+		end
+		_G.C_TradeSkillUI.GetBaseProfessionInfo = function()
+			return { professionID = 202 }
+		end
+		_G.C_TradeSkillUI.SetProfessionChildSkillLineID = function(skillLineID)
+			activeChild = skillLineID
+		end
+		_G.C_TradeSkillUI.GetProfessionInfoBySkillLineID = function(skillLineID)
+			return {
+				professionName = skillLineID == 2911 and "Midnight Engineering" or "Dragon Isles Engineering",
+				parentProfessionID = 202,
+				sourceCounter = skillLineID == 2911 and 1 or 3,
+			}
+		end
+		_G.C_ProfSpecs.SkillLineHasSpecialization = function()
+			return true
+		end
+		_G.C_ProfSpecs.GetConfigIDForSkillLine = function(skillLineID)
+			if skillLineID == activeChild then
+				return configs[skillLineID] or 0
+			end
+			return 0
+		end
+		_G.C_ProfSpecs.GetSpecTabIDsForSkillLine = function(skillLineID)
+			return tabs[skillLineID] or {}
+		end
+		_G.C_ProfSpecs.GetTabInfo = function(tabID)
+			return tabInfo[tabID]
+		end
+		_G.C_ProfSpecs.GetChildrenForPath = function()
+			return {}
+		end
+		_G.C_ProfSpecs.GetPerksForPath = function()
+			return {}
+		end
+		_G.C_ProfSpecs.GetDescriptionForPath = function()
+			return ""
+		end
+
+		pl.Controller:SetViewMode("standalone")
+		pl.Controller:RebuildIndex()
+		assert.are.equal(2911, pl.Controller:GetContext().skillLineID)
+		assert.are.equal("Midnight Eng Spec", pl.Controller:GetVisibleRows()[1].name)
+
+		pl.Controller:SetSkillLine(2801)
+		assert.are.equal(2801, pl.Controller:GetCharDB().lastSkillLineID)
+		assert.are.equal(2801, pl.Controller:GetContext().skillLineID)
+		assert.are.equal("Dragon Eng Spec", pl.Controller:GetVisibleRows()[1].name)
+	end)
+
+	it("defers expansion switch until TRADE_SKILL_LIST_UPDATE", function()
+		local eventHandler
+		_G.CreateFrame = function()
+			local frame = {
+				RegisterEvent = function() end,
+				UnregisterEvent = function() end,
+				UnregisterAllEvents = function() end,
+				SetScript = function(_, name, fn)
+					if name == "OnEvent" then
+						eventHandler = fn
+					end
+				end,
+			}
+			return frame
+		end
+
+		load_addon.reset()
+		_G.PerkLensDB = nil
+		_G.UnitGUID = function()
+			return "test-guid"
+		end
+		load_addon.load_core()
+
+		local pl = load_addon.pl()
+		local activeChild = 2911
+		local dataReady = true
+		local configs = { [2911] = 111, [2801] = 101 }
+		local tabs = {
+			[2911] = { 501 },
+			[2801] = { 502 },
+		}
+		local tabInfo = {
+			[501] = { rootNodeID = 601, name = "Midnight Eng Spec", description = "" },
+			[502] = { rootNodeID = 602, name = "Dragon Eng Spec", description = "" },
+		}
+		local professionSelected = false
+
+		_G.GetProfessions = function()
+			return 1
+		end
+		_G.GetProfessionInfo = function()
+			return "Engineering", nil, 1, 100, 0, 0, 202
+		end
+		_G.EventRegistry = {
+			TriggerEvent = function(_, event)
+				if event == "Professions.ProfessionSelected" then
+					professionSelected = true
+				end
+			end,
+		}
+		_G.ProfessionsFrame = {
+			GetProfessionInfo = function()
+				return { professionID = activeChild }
+			end,
+		}
+		_G.C_TradeSkillUI.GetAllProfessionTradeSkillLines = function()
+			return { 2911, 2801 }
+		end
+		_G.C_TradeSkillUI.GetChildProfessionInfo = function()
+			return { professionID = activeChild }
+		end
+		_G.C_TradeSkillUI.GetBaseProfessionInfo = function()
+			return { professionID = 202 }
+		end
+		_G.C_TradeSkillUI.IsDataSourceChanging = function()
+			return not dataReady
+		end
+		_G.C_TradeSkillUI.SetProfessionChildSkillLineID = function(skillLineID)
+			activeChild = skillLineID
+			dataReady = false
+		end
+		_G.C_TradeSkillUI.GetProfessionInfoBySkillLineID = function(skillLineID)
+			return {
+				professionName = skillLineID == 2911 and "Midnight Engineering" or "Dragon Isles Engineering",
+				parentProfessionID = 202,
+				sourceCounter = skillLineID == 2911 and 1 or 3,
+			}
+		end
+		_G.C_ProfSpecs.SkillLineHasSpecialization = function()
+			return true
+		end
+		_G.C_ProfSpecs.GetConfigIDForSkillLine = function(skillLineID)
+			if not dataReady then
+				return 0
+			end
+			if skillLineID == activeChild then
+				return configs[skillLineID] or 0
+			end
+			return 0
+		end
+		_G.C_ProfSpecs.GetSpecTabIDsForSkillLine = function(skillLineID)
+			return tabs[skillLineID] or {}
+		end
+		_G.C_ProfSpecs.GetTabInfo = function(tabID)
+			return tabInfo[tabID]
+		end
+		_G.C_ProfSpecs.GetChildrenForPath = function()
+			return {}
+		end
+		_G.C_ProfSpecs.GetPerksForPath = function()
+			return {}
+		end
+		_G.C_ProfSpecs.GetDescriptionForPath = function()
+			return ""
+		end
+
+		pl.Controller:SetViewMode("standalone")
+		pl.Controller:SetListening(true)
+		pl.Controller:RebuildIndex()
+		assert.are.equal("Midnight Eng Spec", pl.Controller:GetVisibleRows()[1].name)
+
+		pl.Controller:SetSkillLine(2801)
+		assert.is_true(professionSelected)
+		assert.are.equal(2801, pl.Controller:GetCharDB().lastSkillLineID)
+		assert.is_nil(pl.Controller:GetContext())
+		assert.are.equal(0, #pl.Controller:GetVisibleRows())
+
+		dataReady = true
+		assert.is_true(eventHandler ~= nil)
+		eventHandler("TRADE_SKILL_LIST_UPDATE")
+
+		assert.are.equal(2801, pl.Controller:GetContext().skillLineID)
+		assert.are.equal("Dragon Eng Spec", pl.Controller:GetVisibleRows()[1].name)
+	end)
 end)

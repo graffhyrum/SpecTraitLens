@@ -48,6 +48,7 @@ read_globals = {
 	"C_Traits",
 	"C_TradeSkillUI",
 	"Enum",
+	"Professions",
 }
 
 exclude_files = {

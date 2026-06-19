@@ -66,6 +66,73 @@ function ProfessionContext.GetContextForSkillLine(skillLineID)
 	}
 end
 
+local function getChildSkillLineID()
+	local child = C_TradeSkillUI and C_TradeSkillUI.GetChildProfessionInfo and C_TradeSkillUI.GetChildProfessionInfo()
+	return child and child.professionID
+end
+
+function ProfessionContext.GetChildSkillLineID()
+	return getChildSkillLineID()
+end
+
+function ProfessionContext.IsOnTargetParentProfession(skillLineID)
+	local info = C_TradeSkillUI and C_TradeSkillUI.GetProfessionInfoBySkillLineID(skillLineID)
+	local parentID = info and info.parentProfessionID
+	if not parentID then
+		return false
+	end
+	local base = C_TradeSkillUI and C_TradeSkillUI.GetBaseProfessionInfo and C_TradeSkillUI.GetBaseProfessionInfo()
+	return base and base.professionID == parentID
+end
+
+function ProfessionContext.ProfessionDataReady()
+	if C_TradeSkillUI and C_TradeSkillUI.IsDataSourceChanging then
+		return not C_TradeSkillUI.IsDataSourceChanging()
+	end
+	return true
+end
+
+function ProfessionContext.EnsureSkillLineLoaded(skillLineID)
+	if not skillLineID or getChildSkillLineID() == skillLineID then
+		return false
+	end
+	if not C_TradeSkillUI or not C_TradeSkillUI.SetProfessionChildSkillLineID then
+		return false
+	end
+	if not ProfessionContext.IsOnTargetParentProfession(skillLineID) then
+		return false
+	end
+	C_TradeSkillUI.SetProfessionChildSkillLineID(skillLineID)
+	local child = C_TradeSkillUI.GetChildProfessionInfo and C_TradeSkillUI.GetChildProfessionInfo()
+	if child and EventRegistry and EventRegistry.TriggerEvent then
+		EventRegistry:TriggerEvent("Professions.ProfessionSelected", child)
+	end
+	return true
+end
+
+function ProfessionContext.ApplyProfessionFrameUpdate(skillLineID, openSpecTab)
+	if not skillLineID or not ProfessionContext.ProfessionDataReady() then
+		return false
+	end
+	if not ProfessionsFrame or not ProfessionsFrame.SetProfessionInfo then
+		return false
+	end
+	if not Professions or not Professions.GetProfessionInfo then
+		return false
+	end
+	if C_TradeSkillUI and C_TradeSkillUI.SetProfessionChildSkillLineID and ProfessionContext.IsOnTargetParentProfession(skillLineID) then
+		C_TradeSkillUI.SetProfessionChildSkillLineID(skillLineID)
+	end
+	local professionInfo = Professions.GetProfessionInfo()
+	if not professionInfo or professionInfo.professionID == 0 or professionInfo.professionID ~= skillLineID then
+		return false
+	end
+	professionInfo.openRecipeID = nil
+	professionInfo.openSpecTab = openSpecTab == true
+	ProfessionsFrame:SetProfessionInfo(professionInfo, false)
+	return true
+end
+
 local function compareSpecSkillLines(a, b)
 	local aSource = a.sourceCounter or 0
 	local bSource = b.sourceCounter or 0
@@ -131,18 +198,20 @@ end
 
 function ProfessionContext.ResolveForIndex(charDB, preferActive)
 	local resolved
+	local savedSkillLineID = charDB and charDB.lastSkillLineID
 	if preferActive then
 		resolved = ProfessionContext.GetActiveContext()
 	end
-	if not resolved and charDB and charDB.lastSkillLineID then
-		if ProfessionContext.IsTrainedSkillLine(charDB.lastSkillLineID) then
-			resolved = ProfessionContext.GetContextForSkillLine(charDB.lastSkillLineID)
+	if not resolved and savedSkillLineID then
+		if ProfessionContext.IsTrainedSkillLine(savedSkillLineID) then
+			ProfessionContext.EnsureSkillLineLoaded(savedSkillLineID)
+			resolved = ProfessionContext.GetContextForSkillLine(savedSkillLineID)
 		end
 	end
-	if not resolved then
+	if not resolved and (preferActive or not savedSkillLineID) then
 		resolved = ProfessionContext.GetActiveContext()
 	end
-	if not resolved then
+	if not resolved and not savedSkillLineID then
 		local list = ProfessionContext.ListSpecSkillLines()
 		resolved = list[1]
 	end

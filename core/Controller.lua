@@ -21,12 +21,13 @@ local VIEW_MODES = {
 	closed = true,
 }
 
-local TRAIT_EVENTS = {
+local INDEX_EVENTS = {
 	"TRAIT_CONFIG_UPDATED",
 	"TRAIT_NODE_CHANGED",
 	"TRAIT_TREE_CURRENCY_INFO_UPDATED",
 	"SKILL_LINE_SPECS_RANKS_CHANGED",
 	"SKILL_LINES_CHANGED",
+	"TRADE_SKILL_LIST_UPDATE",
 }
 
 local function charKey()
@@ -84,6 +85,14 @@ local function filterOptions()
 	}
 end
 
+local function refreshProfessionsFrameForSelection()
+	local charDB = Controller:GetCharDB()
+	if not charDB.lastSkillLineID then
+		return
+	end
+	PL.ProfessionContext.ApplyProfessionFrameUpdate(charDB.lastSkillLineID, false)
+end
+
 local function ensureEventFrame()
 	if eventFrame then
 		return eventFrame
@@ -98,6 +107,15 @@ local function ensureEventFrame()
 			Controller:Refresh()
 			return
 		end
+		if event == "TRADE_SKILL_LIST_UPDATE" then
+			if not PL.ProfessionContext.ProfessionDataReady() then
+				return
+			end
+			refreshProfessionsFrameForSelection()
+			Controller:InvalidateIndex()
+			Controller:Refresh()
+			return
+		end
 		Controller:InvalidateIndex()
 		Controller:Refresh()
 	end)
@@ -108,8 +126,8 @@ function Controller:SetListening(active)
 	listening = active == true
 	local frame = ensureEventFrame()
 	if listening then
-		for i = 1, #TRAIT_EVENTS do
-			frame:RegisterEvent(TRAIT_EVENTS[i])
+		for i = 1, #INDEX_EVENTS do
+			frame:RegisterEvent(INDEX_EVENTS[i])
 		end
 	else
 		frame:UnregisterAllEvents()
@@ -134,9 +152,12 @@ function Controller:RebuildIndex()
 	local charDB = self:GetCharDB()
 	-- Embedded index mode prefers active profession context (ProfessionsFrame in-game).
 	local preferActive = viewMode == "embedded"
+	local requestedSkillLineID = charDB.lastSkillLineID
 	context = PL.ProfessionContext.ResolveForIndex(charDB, preferActive)
 	if context then
 		charDB.lastSkillLineID = context.skillLineID
+	elseif requestedSkillLineID and viewMode == "standalone" then
+		charDB.lastSkillLineID = requestedSkillLineID
 	end
 	allRows = context and PL.SpecIndex.Build(context) or {}
 	visibleRows = PL.SpecSearch.Filter(allRows, filterOptions())
@@ -206,8 +227,11 @@ end
 
 function Controller:SetSkillLine(skillLineID)
 	self:GetCharDB().lastSkillLineID = skillLineID
+	PL.ProfessionContext.EnsureSkillLineLoaded(skillLineID)
 	self:InvalidateIndex()
-	self:Refresh()
+	if PL.ProfessionContext.ProfessionDataReady() then
+		self:Refresh()
+	end
 end
 
 function Controller:ListProfessions()

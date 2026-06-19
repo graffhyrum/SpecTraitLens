@@ -2144,7 +2144,8 @@
         "UIDropDownMenu_SetWidth",
         "UIDropDownMenu_Initialize",
         "RunNextFrame",
-        "UISpecialFrames"
+        "UISpecialFrames",
+        "Professions"
     ],
     "Lua.diagnostics.disable": [
         "assign-type-mismatch"

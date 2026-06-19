@@ -35,6 +35,7 @@ describe("ProfessionsNavigator.Navigate", function()
 	local childSkillLineID
 	local baseProfessionID
 	local professionSelectedCalls
+	local setProfessionInfoCalls
 
 	local createdFrames
 
@@ -67,6 +68,12 @@ describe("ProfessionsNavigator.Navigate", function()
 					openSpecTab = openSpecTab,
 				}
 			end,
+			SetProfessionInfo = function(_, professionInfo, useLastSkillLine)
+				setProfessionInfoCalls[#setProfessionInfoCalls + 1] = {
+					professionInfo = professionInfo,
+					useLastSkillLine = useLastSkillLine,
+				}
+			end,
 			HookScript = function() end,
 		}
 	end
@@ -80,6 +87,7 @@ describe("ProfessionsNavigator.Navigate", function()
 		showUIPanelCalls = {}
 		openRecipeResponseCalls = {}
 		professionSelectedCalls = {}
+		setProfessionInfoCalls = {}
 		childSkillLineID = 2881
 		baseProfessionID = 186
 		createdFrames = {}
@@ -138,6 +146,14 @@ describe("ProfessionsNavigator.Navigate", function()
 				end
 			end,
 			RegisterCallback = function() end,
+		}
+		_G.Professions = {
+			GetProfessionInfo = function()
+				return {
+					professionID = childSkillLineID,
+					parentProfessionID = baseProfessionID,
+				}
+			end,
 		}
 
 		load_addon.load("ui/ProfessionsNavigator.lua")
@@ -224,5 +240,27 @@ describe("ProfessionsNavigator.Navigate", function()
 		assert.are.equal(0, #showUIPanelCalls)
 		assert.are.equal(0, #openRecipeResponseCalls)
 		assert.are.equal(specTabID, tabCalls[1])
+	end)
+
+	it("standalone uses synchronous expansion refresh for same parent profession", function()
+		childSkillLineID = 2881
+		baseProfessionID = 186
+		load_addon.load("core/Controller.lua", "PerkLens")
+		local pl = load_addon.pl()
+		pl.Controller:SetViewMode("standalone")
+
+		pl.ProfessionsNavigator:Navigate({
+			kind = "tab",
+			skillLineID = 2883,
+			tabTreeID = 100,
+		})
+
+		assert.are.equal(2883, childSkillLineID)
+		assert.are.equal(0, #openRecipeResponseCalls)
+		assert.are.equal(0, #openTradeSkillCalls)
+		assert.are.equal(0, #professionSelectedCalls)
+		assert.are.equal(1, #setProfessionInfoCalls)
+		assert.is_false(setProfessionInfoCalls[1].useLastSkillLine)
+		assert.is_true(setProfessionInfoCalls[1].professionInfo.openSpecTab)
 	end)
 end)
