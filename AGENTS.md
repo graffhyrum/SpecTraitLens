@@ -1,31 +1,48 @@
 # Agent Instructions
 
-This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
-
-> **Architecture in one line:** Issues live in a local Dolt database
-> (`.beads/dolt/`); cross-machine sync uses `bd dolt push/pull` (a
-> git-compatible protocol), stored under `refs/dolt/data` on your git
-> remote — separate from `refs/heads/*` where your code lives.
-> `.beads/issues.jsonl` is a passive export, not the wire protocol.
->
-> See [SYNC_CONCEPTS.md](https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md)
-> for the one-screen overview and anti-patterns (don't treat JSONL as the
-> source of truth; don't `bd import` during normal operation; don't
-> reach for third-party Dolt hosting before trying the default).
-
-## Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work atomically
-bd close <id>         # Complete work
-bd dolt push          # Push beads data to remote
-```
+Instructions for AI coding agents working on **PerkLens** (SpecTraitLens) — a WoW retail addon.
 
 ## Non-Interactive Shell Commands
 
 **ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `graffhyrum/SpecTraitLens` via `gh` CLI; external PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical triage roles mapped to GitHub label strings (defaults). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout — `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
+
+## Development workflow (Mechanic + just)
+
+- Run `just test` after code changes (sandbox + Busted).
+- Run `just check` before handoff (TOC validate + Luacheck).
+- First-time setup: `just bootstrap` — see [docs/mechanic-setup.md](docs/mechanic-setup.md).
+- In-game verification: enable `!Mechanic`, `/reload`, check Tests tab for NoMoreWorldQuests.
+- Mechanic command reference: `!Mechanic/AGENTS.md` in the Mechanic repo.
+
+## Architecture
+
+Searchable **specialization index** for profession spec trees — flat list from `C_ProfSpecs` + `C_Traits`.
+
+- **Domain glossary:** `CONTEXT.md`, `UBIQUITOUS_LANGUAGE.md`
+- **ADRs:** `docs/adr/` (when present)
+- **Code layout:** `core/` (controller, index), `ui/` (SpecBrowser, ProfessionsHook)
+
+## Blizzard UI reference (out of repo)
+
+WoW UI implementation reference lives on the machine at `%USERPROFILE%\.agents\repos\wow-ui-source\` (not in this git repo).
+
+- Load the **`wow-ui-source`** skill (`~/.agents/skills/wow-ui-source/SKILL.md`) when debugging addon UI surfaces (minimap, world map, objective tracker, POI providers, frame mixins).
+- `C_*` API signatures and globals: **WoW API VS Code extension** (`ketho.wow-api`) — already in `.vscode/settings.json`.
+- Read-only reference — do not copy Blizzard code into addon sources.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker
@@ -105,33 +122,3 @@ bd prime                # Refresh Beads context
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
-
-## Agent skills
-
-### Issue tracker
-
-GitHub Issues on `graffhyrum/SpecTraitLens` via `gh` CLI; external PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Five canonical triage roles mapped to GitHub label strings (defaults). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context layout — `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
-
-## Development workflow (Mechanic + just)
-
-- Run `just test` after code changes (sandbox + Busted).
-- Run `just check` before handoff (TOC validate + Luacheck).
-- First-time setup: `just bootstrap` — see [docs/mechanic-setup.md](docs/mechanic-setup.md).
-- In-game verification: enable `!Mechanic`, `/reload`, check Tests tab for NoMoreWorldQuests.
-- Mechanic command reference: `!Mechanic/AGENTS.md` in the Mechanic repo.
-
-## Blizzard UI reference (out of repo)
-
-WoW UI implementation reference lives on the machine at `%USERPROFILE%\.agents\repos\wow-ui-source\` (not in this git repo).
-
-- Load the **`wow-ui-source`** skill (`~/.agents/skills/wow-ui-source/SKILL.md`) when debugging addon UI surfaces (minimap, world map, objective tracker, POI providers, frame mixins).
-- `C_*` API signatures and globals: **WoW API VS Code extension** (`ketho.wow-api`) — already in `.vscode/settings.json`.
-- Read-only reference — do not copy Blizzard code into addon sources.
