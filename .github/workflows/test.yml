@@ -1,0 +1,83 @@
+name: Test
+
+on:
+  push:
+    branches: [master, main]
+  # pull_request_target runs in base-branch context so github-actions[bot] PRs
+  # (e.g. changeset-release/master) are not held at the June 2026 approval gate.
+  pull_request_target:
+    branches: [master, main]
+  # Version Packages pushes via GITHUB_TOKEN do not fire pull_request events.
+  workflow_run:
+    workflows: ["Version Packages"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    if: >-
+      github.event_name == 'push'
+      || (github.event_name == 'pull_request_target'
+        && github.event.pull_request.head.repo.full_name == github.repository)
+      || (github.event_name == 'workflow_run'
+        && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: >-
+            ${{
+              github.event_name == 'pull_request_target' && github.event.pull_request.head.sha
+              || github.event_name == 'workflow_run' && 'changeset-release/master'
+              || github.sha
+            }}
+          persist-credentials: false
+
+      # Plain clone avoids actions/checkout auth cleanup hitting Mechanic's
+      # broken submodule gitlinks (LibDBIcon-1.0 etc. with no .gitmodules URL).
+      - name: Checkout Mechanic
+        run: git clone --depth 1 https://github.com/Falkicon/Mechanic.git mechanic
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Configure Mechanic paths
+        run: |
+          PARENT="$(dirname "${{ github.workspace }}")"
+          ln -sfn "${{ github.workspace }}" "$PARENT/SpecTraitLens"
+          ln -sfn "${{ github.workspace }}/mechanic" "$PARENT/Mechanic"
+          mkdir -p "$HOME/.mechanic"
+          cat > "$HOME/.mechanic/config.json" <<EOF
+          {
+            "dev_path": "$PARENT",
+            "addon_search_paths": ["${{ github.workspace }}"],
+            "flavors": ["_retail_"]
+          }
+          EOF
+
+      - name: Install Mechanic CLI
+        run: pip install -e mechanic/desktop
+
+      # mech setup only auto-downloads tools on Windows/macOS; Linux needs system packages.
+      - name: Install Lua and Busted
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1 liblua5.1-0-dev luarocks
+          sudo luarocks install busted
+
+      - name: Setup Mechanic tools
+        run: mech setup --skip-config
+
+      - name: Generate sandbox stubs
+        run: mech call sandbox.generate
+
+      - name: Sandbox tests
+        run: |
+          mech call sandbox.test '{"addon": "SpecTraitLens", "path": "${{ github.workspace }}"}'
+
+      - name: Busted tests
+        run: |
+          mech call addon.test '{"addon": "SpecTraitLens", "path": "${{ github.workspace }}"}'

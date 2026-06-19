@@ -1,0 +1,30 @@
+## Interface: 120007
+## Title: Spec Trait Lens
+## Notes: Searchable profession specialization trait browser.
+## Author: graffhyrum
+## Category-enUS: Professions
+## Version: 0.1.0
+## SavedVariables: SpecTraitLensDB
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+## LoadWith: Blizzard_Professions
+## OptionalDeps: !Mechanic
+
+libs\LibStub.lua
+libs\CallbackHandler-1.0.lua
+libs\LibDataBroker-1.1.lua
+libs\LibDBIcon-1.0.lua
+
+core\init.lua
+core\Debounce.lua
+core\ProfessionContext.lua
+core\RankUtil.lua
+core\TraitIndex.lua
+core\TraitSearch.lua
+core\Controller.lua
+ui\TraitBrowser.lua
+ui\ProfessionsHook.lua
+ui\Settings.lua
+ui\MinimapButton.lua
+ui\Slash.lua
+ui\MechanicTests.lua
+core\Bootstrap.lua

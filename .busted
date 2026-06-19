@@ -1,0 +1,11 @@
+return {
+	default = {
+		verbose = true,
+		ROOT = { "Tests" },
+		pattern = "_busted",
+	},
+	ci = {
+		coverage = true,
+		output = "junit",
+	},
+}

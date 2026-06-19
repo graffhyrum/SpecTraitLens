@@ -1,0 +1,11 @@
+{
+  "$schema": "https://mechanic.dev/schemas/libs.json",
+  "description": "Library configuration for NoMoreWorldQuests (Mechanic tooling; shipped copies live in libs/)",
+  "mode": "include",
+  "libraries": {
+    "LibStub": "latest",
+    "CallbackHandler-1.0": "latest",
+    "LibDataBroker-1.1": "latest",
+    "LibDBIcon-1.0": "latest"
+  }
+}

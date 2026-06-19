@@ -1,0 +1,21 @@
+# Local AI session history (SpecStory)
+.specstory/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+
+
+# Environment variables
+.env
+
+# Bun (@types/bun for scripts/)
+node_modules/
+
+# BigWigs packager output
+.release/
+
+# Legacy path — reference moved to %USERPROFILE%\.agents\repos\wow-ui-source
+repos/

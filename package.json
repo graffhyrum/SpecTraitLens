@@ -1,0 +1,14 @@
+{
+  "name": "spec-trait-lens",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "changeset": "changeset",
+    "version": "bun scripts/version.ts",
+    "publish:tag": "bun scripts/publish-tag.ts"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.8",
+    "@types/bun": "^1.3.14"
+  }
+}
