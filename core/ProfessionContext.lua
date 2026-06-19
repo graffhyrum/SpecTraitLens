@@ -70,15 +70,23 @@ local function compareSpecSkillLines(a, b)
 	local aSource = a.sourceCounter or 0
 	local bSource = b.sourceCounter or 0
 	if aSource > 0 and bSource > 0 and aSource ~= bSource then
-		return aSource > bSource
+		return aSource < bSource
 	end
-	local aIndex = a.listIndex or 0
-	local bIndex = b.listIndex or 0
-	if aIndex ~= bIndex then
-		return aIndex > bIndex
+	if aSource > 0 and bSource > 0 then
+		local aIndex = a.listIndex or 0
+		local bIndex = b.listIndex or 0
+		if aIndex ~= bIndex then
+			return aIndex < bIndex
+		end
+	elseif aSource == 0 and bSource == 0 then
+		local aIndex = a.listIndex or 0
+		local bIndex = b.listIndex or 0
+		if aIndex ~= bIndex then
+			return aIndex > bIndex
+		end
 	end
 	if a.skillLineID ~= b.skillLineID then
-		return a.skillLineID > b.skillLineID
+		return a.skillLineID < b.skillLineID
 	end
 	return (a.professionName or "") < (b.professionName or "")
 end

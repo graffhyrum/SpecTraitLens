@@ -259,12 +259,12 @@ describe("ProfessionContext.ListSpecSkillLines", function()
 		end
 	end
 
-	it("orders professions by expansion newest first (sourceCounter desc)", function()
+	it("orders professions by expansion newest first (lower sourceCounter is newer)", function()
 		local pl = load_addon.pl()
 		stubProfessionAPIs({ 2881, 2882, 2883 }, {
 			[2881] = {
 				professionName = "Dragon Isles Mining",
-				sourceCounter = 1,
+				sourceCounter = 3,
 				parentProfessionID = 186,
 			},
 			[2882] = {
@@ -274,7 +274,7 @@ describe("ProfessionContext.ListSpecSkillLines", function()
 			},
 			[2883] = {
 				professionName = "Midnight Mining",
-				sourceCounter = 3,
+				sourceCounter = 1,
 				parentProfessionID = 186,
 			},
 		}, { [1] = 186 })
@@ -284,6 +284,45 @@ describe("ProfessionContext.ListSpecSkillLines", function()
 		assert.are.equal(2883, list[1].skillLineID)
 		assert.are.equal(2882, list[2].skillLineID)
 		assert.are.equal(2881, list[3].skillLineID)
+	end)
+
+	it("orders mixed professions newest expansion first like the dropdown", function()
+		local pl = load_addon.pl()
+		stubProfessionAPIs({ 2801, 2811, 2812, 2910, 2911 }, {
+			[2801] = {
+				professionName = "Dragon Isles Engineering",
+				sourceCounter = 3,
+				parentProfessionID = 202,
+			},
+			[2811] = {
+				professionName = "Khaz Algar Mining",
+				sourceCounter = 2,
+				parentProfessionID = 186,
+			},
+			[2812] = {
+				professionName = "Khaz Algar Engineering",
+				sourceCounter = 2,
+				parentProfessionID = 202,
+			},
+			[2910] = {
+				professionName = "Midnight Mining",
+				sourceCounter = 1,
+				parentProfessionID = 186,
+			},
+			[2911] = {
+				professionName = "Midnight Engineering",
+				sourceCounter = 1,
+				parentProfessionID = 202,
+			},
+		}, { [1] = 186, [2] = 202 })
+
+		local list = pl.ProfessionContext.ListSpecSkillLines()
+		assert.are.equal(5, #list)
+		assert.are.equal(2910, list[1].skillLineID)
+		assert.are.equal(2911, list[2].skillLineID)
+		assert.are.equal(2811, list[3].skillLineID)
+		assert.are.equal(2812, list[4].skillLineID)
+		assert.are.equal(2801, list[5].skillLineID)
 	end)
 
 	it("orders by API list position when sourceCounter is zero", function()
@@ -317,25 +356,25 @@ describe("ProfessionContext.ListSpecSkillLines", function()
 		stubProfessionAPIs({ 2883, 2871, 2872 }, {
 			[2883] = {
 				professionName = "Midnight Mining",
-				sourceCounter = 3,
+				sourceCounter = 1,
 				parentProfessionID = 186,
 			},
 			[2871] = {
 				professionName = "Midnight Alchemy",
-				sourceCounter = 3,
+				sourceCounter = 1,
 				parentProfessionID = 171,
 			},
 			[2872] = {
 				professionName = "Midnight Blacksmithing",
-				sourceCounter = 3,
+				sourceCounter = 1,
 				parentProfessionID = 164,
 			},
 		}, { [1] = 186, [2] = 164 })
 
 		local list = pl.ProfessionContext.ListSpecSkillLines()
 		assert.are.equal(2, #list)
-		assert.are.equal(2872, list[1].skillLineID)
-		assert.are.equal(2883, list[2].skillLineID)
+		assert.are.equal(2883, list[1].skillLineID)
+		assert.are.equal(2872, list[2].skillLineID)
 	end)
 end)
 
