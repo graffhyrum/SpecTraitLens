@@ -159,6 +159,9 @@ describe("Controller ViewMode", function()
 	before_each(function()
 		load_addon.reset()
 		_G.PerkLensDB = nil
+		_G.UnitGUID = function()
+			return "test-guid"
+		end
 		load_addon.load_core()
 	end)
 
@@ -258,7 +261,7 @@ describe("ProfessionContext.ListSpecSkillLines", function()
 
 	it("orders professions by expansion newest first (sourceCounter desc)", function()
 		local pl = load_addon.pl()
-		stubProfessionAPIs({ 2883, 2882, 2881 }, {
+		stubProfessionAPIs({ 2881, 2882, 2883 }, {
 			[2881] = {
 				professionName = "Dragon Isles Mining",
 				sourceCounter = 1,
@@ -278,6 +281,32 @@ describe("ProfessionContext.ListSpecSkillLines", function()
 
 		local list = pl.ProfessionContext.ListSpecSkillLines()
 		assert.are.equal(3, #list)
+		assert.are.equal(2883, list[1].skillLineID)
+		assert.are.equal(2882, list[2].skillLineID)
+		assert.are.equal(2881, list[3].skillLineID)
+	end)
+
+	it("orders by API list position when sourceCounter is zero", function()
+		local pl = load_addon.pl()
+		stubProfessionAPIs({ 2881, 2882, 2883 }, {
+			[2881] = {
+				professionName = "Dragon Isles Mining",
+				sourceCounter = 0,
+				parentProfessionID = 186,
+			},
+			[2882] = {
+				professionName = "Khaz Algar Mining",
+				sourceCounter = 0,
+				parentProfessionID = 186,
+			},
+			[2883] = {
+				professionName = "Midnight Mining",
+				sourceCounter = 0,
+				parentProfessionID = 186,
+			},
+		}, { [1] = 186 })
+
+		local list = pl.ProfessionContext.ListSpecSkillLines()
 		assert.are.equal(2883, list[1].skillLineID)
 		assert.are.equal(2882, list[2].skillLineID)
 		assert.are.equal(2881, list[3].skillLineID)
@@ -314,6 +343,9 @@ describe("Controller standalone profession switch", function()
 	before_each(function()
 		load_addon.reset()
 		_G.PerkLensDB = nil
+		_G.UnitGUID = function()
+			return "test-guid"
+		end
 		load_addon.load_core()
 	end)
 
@@ -322,6 +354,9 @@ describe("Controller standalone profession switch", function()
 		local mining = ctx(2883, "Midnight Mining")
 		local alchemy = ctx(2871, "Midnight Alchemy")
 		withStubs({
+			IsTrainedSkillLine = function()
+				return true
+			end,
 			GetActiveContext = function()
 				return mining
 			end,

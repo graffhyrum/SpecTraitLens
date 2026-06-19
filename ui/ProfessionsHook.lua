@@ -7,8 +7,6 @@ local hooked = {}
 local indexMode = false
 local specTabID
 local indexTab
-local pendingNav
-local navFrame
 local updateIndexTab
 
 local TAB_ICON = "Interface\\Icons\\INV_Misc_Book_09"
@@ -103,28 +101,6 @@ local function setBlizzardSpecChromeVisible(visible)
 	end)
 end
 
-local function selectSpecTab(specPage, tabTreeID)
-	if EventRegistry and EventRegistry.TriggerEvent then
-		EventRegistry:TriggerEvent("ProfessionsSpecializations.TabSelected", tabTreeID)
-	elseif specPage.SetSelectedTab then
-		specPage:SetSelectedTab(tabTreeID)
-	end
-end
-
-local function selectSpecPath(specPage, tabTreeID, pathID)
-	if specPage.SetDefaultPath then
-		specPage:SetDefaultPath(pathID)
-	end
-	if specPage.SetDefaultTab then
-		specPage:SetDefaultTab(tabTreeID)
-	end
-	if EventRegistry and EventRegistry.TriggerEvent then
-		EventRegistry:TriggerEvent("ProfessionsSpecializations.PathSelected", pathID, true)
-	elseif specPage.SetDetailedPanel then
-		specPage:SetDetailedPanel(pathID)
-	end
-end
-
 local function restoreBlizzardSpecToCurrentTab()
 	local specPage = getSpecPage()
 	if not specPage then
@@ -135,7 +111,11 @@ local function restoreBlizzardSpecToCurrentTab()
 
 	local treeID = specPage.GetTalentTreeID and specPage:GetTalentTreeID()
 	if treeID then
-		selectSpecTab(specPage, treeID)
+		if EventRegistry and EventRegistry.TriggerEvent then
+			EventRegistry:TriggerEvent("ProfessionsSpecializations.TabSelected", treeID)
+		elseif specPage.SetSelectedTab then
+			specPage:SetSelectedTab(treeID)
+		end
 		return
 	end
 
@@ -152,105 +132,6 @@ local function exitIndexOverlay()
 	indexMode = false
 	PL.SpecBrowser:SetEmbeddedVisible(false)
 	updateIndexTab()
-end
-
-local function specPageMatchesTarget(specPage, target)
-	if not specPage or not specPage.GetProfessionID or not target then
-		return false
-	end
-	return specPage:GetProfessionID() == target.skillLineID
-end
-
-local function applySpecNavigation(target)
-	local specPage = getSpecPage()
-	if not specPageMatchesTarget(specPage, target) then
-		return false
-	end
-
-	setBlizzardSpecChromeVisible(true)
-	selectSpecTab(specPage, target.tabTreeID)
-	if target.pathID then
-		selectSpecPath(specPage, target.tabTreeID, target.pathID)
-	end
-	return true
-end
-
-local function applyPendingNav()
-	local target = pendingNav
-	if not target or not ProfessionsFrame or not specTabID then
-		return false
-	end
-
-	if applySpecNavigation(target) then
-		pendingNav = nil
-		return true
-	end
-	return false
-end
-
-local function ensureSpecTabSelected()
-	if ProfessionsFrame and ProfessionsFrame.SetTab and specTabID then
-		ProfessionsFrame:SetTab(specTabID, true)
-	end
-end
-
-local function ensureNavFrame()
-	if navFrame then
-		return navFrame
-	end
-	navFrame = CreateFrame("Frame")
-	navFrame:RegisterEvent("TRADE_SKILL_LIST_UPDATE")
-	navFrame:SetScript("OnEvent", function()
-		applyPendingNav()
-	end)
-	return navFrame
-end
-
-local function schedulePendingNav()
-	ensureNavFrame()
-	RunNextFrame(function()
-		if applyPendingNav() then
-			return
-		end
-		RunNextFrame(applyPendingNav)
-	end)
-end
-
-function ProfessionsHook:NavigateToRow(row)
-	local target = PL.SpecNavigation and PL.SpecNavigation.ResolveTarget(row)
-	if not target then
-		return
-	end
-
-	if indexMode then
-		exitIndexOverlay()
-	end
-
-	if C_AddOns and C_AddOns.LoadAddOn and not C_AddOns.IsAddOnLoaded("Blizzard_Professions") then
-		C_AddOns.LoadAddOn("Blizzard_Professions")
-	end
-
-	if not ProfessionsFrame then
-		return
-	end
-
-	pendingNav = target
-	ensureSpecTabSelected()
-
-	local specPage = getSpecPage()
-	local needsProfessionSwitch = not specPageMatchesTarget(specPage, target)
-
-	if not ProfessionsFrame:IsShown() or needsProfessionSwitch then
-		if C_TradeSkillUI and C_TradeSkillUI.OpenTradeSkill then
-			C_TradeSkillUI.OpenTradeSkill(target.skillLineID)
-		end
-		if not ProfessionsFrame:IsShown() and ShowUIPanel then
-			ShowUIPanel(ProfessionsFrame)
-		end
-		ensureSpecTabSelected()
-	end
-
-	schedulePendingNav()
 end
 
 local function applyIndexMode(enabled)
@@ -365,6 +246,12 @@ local function setupProfessionsFrame(frame)
 end
 
 function ProfessionsHook:Init()
+	PL.ProfessionsNavigator:SetBeforeNavigate(function()
+		if indexMode then
+			exitIndexOverlay()
+		end
+	end)
+
 	local frame = CreateFrame("Frame")
 	frame:RegisterEvent("ADDON_LOADED")
 	frame:SetScript("OnEvent", function(_, event, name)

@@ -1,4 +1,5 @@
 dofile("Tests/bootstrap.lua")
+local load_addon = require("Tests.helpers.load_addon")
 
 describe("ProfessionsHook forward refs", function()
 	it("exitIndexOverlay can call updateIndexTab after forward declaration", function()

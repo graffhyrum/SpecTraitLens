@@ -50,6 +50,8 @@ core\Controller.lua
 
 ui\SpecBrowser.lua
 
+ui\ProfessionsNavigator.lua
+
 ui\ProfessionsHook.lua
 
 ui\Settings.lua

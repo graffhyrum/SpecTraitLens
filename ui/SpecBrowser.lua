@@ -148,7 +148,7 @@ local function createRow(parent)
 
 	f:SetScript("OnMouseUp", function(self, button)
 		if button == "LeftButton" and self.row then
-			PL.ProfessionsHook:NavigateToRow(self.row)
+			PL.ProfessionsNavigator:Navigate(self.row)
 		end
 	end)
 	f:SetScript("OnEnter", function(self)
