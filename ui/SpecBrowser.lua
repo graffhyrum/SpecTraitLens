@@ -31,8 +31,9 @@ local function initProfessionDropdown(_, level)
 		info.text = prof.professionName
 		info.value = prof.skillLineID
 		info.checked = prof.skillLineID == currentID
-		info.func = function()
-			PL.Controller:SetSkillLine(prof.skillLineID)
+		info.arg1 = prof.skillLineID
+		info.func = function(_, skillLineID)
+			PL.Controller:SetSkillLine(skillLineID)
 		end
 		UIDropDownMenu_AddButton(info)
 	end

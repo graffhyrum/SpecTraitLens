@@ -124,6 +124,35 @@ describe("ProfessionContext.ResolveForIndex", function()
 			end)
 		end)
 	end
+
+	it("ignores saved skill line when profession was switched away", function()
+		local pl = load_addon.pl()
+		local active = ctx(2872, "Midnight Blacksmithing")
+		local stale = ctx(2871, "Midnight Alchemy")
+		withStubs({
+			GetActiveContext = function()
+				return active
+			end,
+			GetContextForSkillLine = function(skillLineID)
+				if skillLineID == 2871 then
+					return stale
+				end
+				if skillLineID == 2872 then
+					return active
+				end
+				return nil
+			end,
+			ListSpecSkillLines = function()
+				return { active }
+			end,
+			IsTrainedSkillLine = function(skillLineID)
+				return skillLineID ~= 2871
+			end,
+		}, function()
+			local resolved = pl.ProfessionContext.ResolveForIndex({ lastSkillLineID = 2871 }, false)
+			assert.are.equal(2872, resolved.skillLineID)
+		end)
+	end)
 end)
 
 describe("Controller ViewMode", function()
@@ -192,5 +221,129 @@ describe("Controller ViewMode", function()
 		}
 		pl.Controller:SetViewMode("embedded")
 		pl.Controller:RebuildIndex()
+	end)
+end)
+
+describe("ProfessionContext.ListSpecSkillLines", function()
+	before_each(function()
+		load_addon.reset()
+		load_addon.load_core()
+	end)
+
+	local function stubProfessionAPIs(skillLines, professionInfoBySkillLineID, trainedSkillLines)
+		_G.C_TradeSkillUI.GetAllProfessionTradeSkillLines = function()
+			return skillLines
+		end
+		_G.C_ProfSpecs.SkillLineHasSpecialization = function()
+			return true
+		end
+		_G.C_ProfSpecs.GetConfigIDForSkillLine = function(skillLineID)
+			return skillLineID
+		end
+		_G.C_TradeSkillUI.GetProfessionInfoBySkillLineID = function(skillLineID)
+			return professionInfoBySkillLineID[skillLineID]
+		end
+		_G.GetProfessions = function()
+			return 1, 2
+		end
+		local trained = trainedSkillLines or {}
+		_G.GetProfessionInfo = function(index)
+			local skillLine = trained[index]
+			if not skillLine then
+				return nil
+			end
+			return "Profession", nil, 1, 100, 0, 0, skillLine
+		end
+	end
+
+	it("orders professions by expansion newest first (sourceCounter desc)", function()
+		local pl = load_addon.pl()
+		stubProfessionAPIs({ 2883, 2882, 2881 }, {
+			[2881] = {
+				professionName = "Dragon Isles Mining",
+				sourceCounter = 1,
+				parentProfessionID = 186,
+			},
+			[2882] = {
+				professionName = "Khaz Algar Mining",
+				sourceCounter = 2,
+				parentProfessionID = 186,
+			},
+			[2883] = {
+				professionName = "Midnight Mining",
+				sourceCounter = 3,
+				parentProfessionID = 186,
+			},
+		}, { [1] = 186 })
+
+		local list = pl.ProfessionContext.ListSpecSkillLines()
+		assert.are.equal(3, #list)
+		assert.are.equal(2883, list[1].skillLineID)
+		assert.are.equal(2882, list[2].skillLineID)
+		assert.are.equal(2881, list[3].skillLineID)
+	end)
+
+	it("excludes skill lines from switched-away professions", function()
+		local pl = load_addon.pl()
+		stubProfessionAPIs({ 2883, 2871, 2872 }, {
+			[2883] = {
+				professionName = "Midnight Mining",
+				sourceCounter = 3,
+				parentProfessionID = 186,
+			},
+			[2871] = {
+				professionName = "Midnight Alchemy",
+				sourceCounter = 3,
+				parentProfessionID = 171,
+			},
+			[2872] = {
+				professionName = "Midnight Blacksmithing",
+				sourceCounter = 3,
+				parentProfessionID = 164,
+			},
+		}, { [1] = 186, [2] = 164 })
+
+		local list = pl.ProfessionContext.ListSpecSkillLines()
+		assert.are.equal(2, #list)
+		assert.are.equal(2872, list[1].skillLineID)
+		assert.are.equal(2883, list[2].skillLineID)
+	end)
+end)
+
+describe("Controller standalone profession switch", function()
+	before_each(function()
+		load_addon.reset()
+		_G.PerkLensDB = nil
+		load_addon.load_core()
+	end)
+
+	it("SetSkillLine updates context in standalone view mode", function()
+		local pl = load_addon.pl()
+		local mining = ctx(2883, "Midnight Mining")
+		local alchemy = ctx(2871, "Midnight Alchemy")
+		withStubs({
+			GetActiveContext = function()
+				return mining
+			end,
+			GetContextForSkillLine = function(skillLineID)
+				if skillLineID == 2883 then
+					return mining
+				end
+				if skillLineID == 2871 then
+					return alchemy
+				end
+				return nil
+			end,
+			ListSpecSkillLines = function()
+				return { mining, alchemy }
+			end,
+		}, function()
+			pl.Controller:SetViewMode("standalone")
+			pl.Controller:RebuildIndex()
+			assert.are.equal(2883, pl.Controller:GetContext().skillLineID)
+
+			pl.Controller:SetSkillLine(2871)
+			assert.are.equal(2871, pl.Controller:GetContext().skillLineID)
+		end)
 	end)
 end)

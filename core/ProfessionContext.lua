@@ -7,6 +7,39 @@ local function hasSpec(skillLineID)
 	return skillLineID and C_ProfSpecs.SkillLineHasSpecialization(skillLineID)
 end
 
+local function getTrainedParentProfessionIDs()
+	if type(GetProfessions) ~= "function" or type(GetProfessionInfo) ~= "function" then
+		return nil
+	end
+	local ids = {}
+	local prof1, prof2, arch, fish, cook = GetProfessions()
+	for _, index in ipairs({ prof1, prof2, arch, fish, cook }) do
+		if index then
+			local _, _, rank, _, _, _, skillLine = GetProfessionInfo(index)
+			if skillLine and rank and rank > 0 then
+				ids[skillLine] = true
+			end
+		end
+	end
+	return ids
+end
+
+function ProfessionContext.IsTrainedSkillLine(skillLineID)
+	if not skillLineID then
+		return false
+	end
+	local trained = getTrainedParentProfessionIDs()
+	if not trained then
+		return true
+	end
+	local info = C_TradeSkillUI and C_TradeSkillUI.GetProfessionInfoBySkillLineID(skillLineID)
+	local parentID = info and info.parentProfessionID
+	if not parentID then
+		return false
+	end
+	return trained[parentID] == true
+end
+
 function ProfessionContext.ResolveSkillLineID(skillLineID)
 	if hasSpec(skillLineID) then
 		return skillLineID
@@ -28,6 +61,8 @@ function ProfessionContext.GetContextForSkillLine(skillLineID)
 		configID = configID,
 		professionName = (info and info.professionName) or "Profession",
 		parentProfessionID = info and info.parentProfessionID,
+		sourceCounter = info and info.sourceCounter or 0,
+		expansionName = info and info.expansionName,
 	}
 end
 
@@ -51,12 +86,17 @@ function ProfessionContext.ListSpecSkillLines()
 		return out
 	end
 	for _, skillLine in ipairs(C_TradeSkillUI.GetAllProfessionTradeSkillLines()) do
-		local ctx = ProfessionContext.GetContextForSkillLine(skillLine)
-		if ctx then
-			out[#out + 1] = ctx
+		if ProfessionContext.IsTrainedSkillLine(skillLine) then
+			local ctx = ProfessionContext.GetContextForSkillLine(skillLine)
+			if ctx then
+				out[#out + 1] = ctx
+			end
 		end
 	end
 	table.sort(out, function(a, b)
+		if a.sourceCounter ~= b.sourceCounter then
+			return a.sourceCounter > b.sourceCounter
+		end
 		return (a.professionName or "") < (b.professionName or "")
 	end)
 	return out
@@ -73,7 +113,9 @@ function ProfessionContext.ResolveForIndex(charDB, preferActive)
 		resolved = ProfessionContext.GetActiveContext()
 	end
 	if not resolved and charDB and charDB.lastSkillLineID then
-		resolved = ProfessionContext.GetContextForSkillLine(charDB.lastSkillLineID)
+		if ProfessionContext.IsTrainedSkillLine(charDB.lastSkillLineID) then
+			resolved = ProfessionContext.GetContextForSkillLine(charDB.lastSkillLineID)
+		end
 	end
 	if not resolved then
 		resolved = ProfessionContext.GetActiveContext()
