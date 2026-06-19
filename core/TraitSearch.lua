@@ -95,7 +95,7 @@ function TraitSearch.Filter(rows, options)
 		end
 		if ok then
 			visible[row.rowKey] = true
-			if query ~= "" then
+			if query ~= "" or majorOnly or unearnedOnly then
 				promoteAncestors(rows, visible, i)
 			end
 		end

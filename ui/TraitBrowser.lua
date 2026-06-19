@@ -6,7 +6,6 @@ STL.TraitBrowser = TraitBrowser
 local ROW_HEIGHT_TAB = 28
 local ROW_HEIGHT_PATH = 56
 local ROW_HEIGHT_PERK = 44
-local POOL_SIZE = 40
 
 local instances = {}
 
@@ -175,7 +174,7 @@ local function buildChrome(browser)
 	end)
 end
 
-function TraitBrowser:Update(browser)
+function TraitBrowser.Update(browser)
 	buildChrome(browser)
 	local ctx = STL.Controller:GetContext()
 	local kp = STL.Controller:GetKnowledgeAvailable()

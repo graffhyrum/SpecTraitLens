@@ -2133,7 +2133,8 @@
         "QuestUtil",
         "AutoQuestPopupTrackerMixin",
         "EventToastManagerFrameMixin",
-        "UIErrorsMixin"
+        "UIErrorsMixin",
+        "TalentUtil"
     ],
     "Lua.diagnostics.disable": [
         "assign-type-mismatch"

@@ -19,6 +19,13 @@ globals = {
 	"SpecTraitLens",
 	"SpecTraitLensDB",
 	"strtrim",
+	"hooksecurefunc",
+	"InputBoxTemplate",
+	"BackdropTemplate",
+	"UIPanelButtonTemplate",
+	"UICheckButtonTemplate",
+	"UIPanelCloseButton",
+	"UIPanelScrollFrameTemplate",
 }
 
 read_globals = {
@@ -33,4 +40,12 @@ read_globals = {
 exclude_files = {
 	"libs/**",
 	"repos/**",
+	"**/*_spec.lua",
+	"Tests/**",
+	"scripts/**",
 }
+
+ignore = {
+	"212",
+}
+

@@ -1,12 +1,20 @@
 local STL = _G.SpecTraitLens
 
 describe("RankUtil (sandbox)", function()
-	local RankUtil = STL.RankUtil
-
 	it("subtracts unlock rank from display ranks", function()
+		_G.C_ProfSpecs = {
+			GetUnlockEntryForPath = function()
+				return 901
+			end,
+		}
+		_G.C_Traits = {
+			GetEntryInfo = function()
+				return { maxRanks = 1 }
+			end,
+		}
 		local nodeInfo = { currentRank = 3, maxRanks = 5 }
-		local curr, max = RankUtil.GetDisplayRanks(101, 301, nodeInfo)
-		assert.are.equal(2, curr)
-		assert.are.equal(4, max)
+		local curr, max = STL.RankUtil.GetDisplayRanks(101, 301, nodeInfo)
+		assert.equals(2, curr)
+		assert.equals(4, max)
 	end)
 end)
