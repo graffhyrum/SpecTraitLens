@@ -128,12 +128,6 @@ local function restoreBlizzardSpecUI()
 	restoreBlizzardSpecToCurrentTab()
 end
 
-local function exitIndexOverlay()
-	indexMode = false
-	PL.SpecBrowser:SetEmbeddedVisible(false)
-	updateIndexTab()
-end
-
 local function applyIndexMode(enabled)
 	local wasIndexMode = indexMode
 	indexMode = enabled == true
@@ -248,7 +242,7 @@ end
 function ProfessionsHook:Init()
 	PL.ProfessionsNavigator:SetBeforeNavigate(function()
 		if indexMode then
-			exitIndexOverlay()
+			applyIndexMode(false)
 		end
 	end)
 
