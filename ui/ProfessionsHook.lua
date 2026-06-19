@@ -76,13 +76,11 @@ local function setBlizzardSpecChromeVisible(visible)
 	end)
 end
 
-local function restoreBlizzardSpecUI()
+local function restoreBlizzardSpecToCurrentTab()
 	local specPage = getSpecPage()
 	if not specPage then
 		return
 	end
-
-	setBlizzardSpecChromeVisible(true)
 
 	local treeID = specPage.GetTalentTreeID and specPage:GetTalentTreeID()
 	if treeID and specPage.SetSelectedTab then
@@ -98,6 +96,18 @@ local function restoreBlizzardSpecUI()
 			~= Enum.ProfessionsSpecTabState.Unlocked
 		specPage.TreePreview:SetShown(isLocked)
 	end
+end
+
+local function restoreBlizzardSpecUI()
+	setBlizzardSpecChromeVisible(true)
+	restoreBlizzardSpecToCurrentTab()
+end
+
+local function exitIndexOverlay()
+	indexMode = false
+	setBlizzardSpecChromeVisible(true)
+	PL.SpecBrowser:SetEmbeddedVisible(false)
+	updateIndexTab()
 end
 
 local function updateIndexTab()
@@ -118,18 +128,11 @@ local function specPageMatchesTarget(specPage, target)
 	return specPage:GetProfessionID() == target.skillLineID
 end
 
-local function applyPendingNav()
-	local target = pendingNav
-	if not target or not ProfessionsFrame or not specTabID then
-		return
-	end
-
+local function applySpecNavigation(target)
 	local specPage = getSpecPage()
-	if not specPageMatchesTarget(specPage, target) then
-		return
+	if not specPageMatchesTarget(specPage, target) or not specPage.SetSelectedTab then
+		return false
 	end
-
-	pendingNav = nil
 
 	specPage:SetSelectedTab(target.tabTreeID)
 	if target.pathID then
@@ -144,6 +147,24 @@ local function applyPendingNav()
 		elseif specPage.SetDetailedPanel then
 			specPage:SetDetailedPanel(target.pathID)
 		end
+	end
+	return true
+end
+
+local function applyPendingNav()
+	local target = pendingNav
+	if not target or not ProfessionsFrame or not specTabID then
+		return
+	end
+
+	if applySpecNavigation(target) then
+		pendingNav = nil
+	end
+end
+
+local function ensureSpecTabSelected()
+	if ProfessionsFrame and ProfessionsFrame.SetTab and specTabID then
+		ProfessionsFrame:SetTab(specTabID, true)
 	end
 end
 
@@ -170,12 +191,8 @@ function ProfessionsHook:NavigateToRow(row)
 		return
 	end
 
-	if PL.SpecBrowser and PL.SpecBrowser.standalone and PL.SpecBrowser.standalone:IsShown() then
-		PL.SpecBrowser:HideStandalone()
-	end
-
 	if indexMode then
-		applyIndexMode(false)
+		exitIndexOverlay()
 	end
 
 	if C_AddOns and C_AddOns.LoadAddOn and not C_AddOns.IsAddOnLoaded("Blizzard_Professions") then
@@ -187,17 +204,19 @@ function ProfessionsHook:NavigateToRow(row)
 	end
 
 	pendingNav = target
+	ensureSpecTabSelected()
 
-	if C_TradeSkillUI and C_TradeSkillUI.OpenTradeSkill then
-		C_TradeSkillUI.OpenTradeSkill(target.skillLineID)
-	end
+	local specPage = getSpecPage()
+	local needsProfessionSwitch = not specPageMatchesTarget(specPage, target)
 
-	if not ProfessionsFrame:IsShown() and ShowUIPanel then
-		ShowUIPanel(ProfessionsFrame)
-	end
-
-	if ProfessionsFrame.SetTab and specTabID then
-		ProfessionsFrame:SetTab(specTabID, true)
+	if not ProfessionsFrame:IsShown() or needsProfessionSwitch then
+		if C_TradeSkillUI and C_TradeSkillUI.OpenTradeSkill then
+			C_TradeSkillUI.OpenTradeSkill(target.skillLineID)
+		end
+		if not ProfessionsFrame:IsShown() and ShowUIPanel then
+			ShowUIPanel(ProfessionsFrame)
+		end
+		ensureSpecTabSelected()
 	end
 
 	schedulePendingNav()
