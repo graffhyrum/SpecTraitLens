@@ -106,7 +106,7 @@ end
 
 local function stateColor(row)
 	if row.kind == "perk" then
-		if row.isEarned then
+		if PL.RowProgress.IsEarned(row) then
 			return 1, 0.82, 0
 		end
 		if row.isMajorPerk then
@@ -114,7 +114,7 @@ local function stateColor(row)
 		end
 		return 0.82, 0.82, 0.82
 	end
-	if row.kind == "path" and row.isCompleted then
+	if PL.RowProgress.IsCompleted(row) then
 		return 0.45, 1, 0.45
 	end
 	if row.kind == "tab" then
@@ -200,7 +200,7 @@ local function populateRow(rowFrame, row, innerWidth)
 		rowFrame.name:SetFontObject("GameFontHighlightSmall")
 		detailText = detailAfterTitle(nameText, row.description)
 		rowFrame.badge:SetText(PL.RowDisplay.PerkBadgeText(row))
-		if row.isEarned then
+		if PL.RowProgress.IsEarned(row) then
 			rowFrame.badge:SetTextColor(0.45, 1, 0.45)
 		elseif row.isMajorPerk then
 			rowFrame.badge:SetTextColor(1, 0.72, 0.35)

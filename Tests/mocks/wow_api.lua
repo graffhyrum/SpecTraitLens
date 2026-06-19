@@ -26,8 +26,8 @@ local profSpecs = {
 	},
 	descriptions = {
 		path = {
-			[301] = "Root mining path",
-			[302] = "Deep mining path",
+			[301] = "Unlocks deeper mining techniques.",
+			[302] = "Grants bonuses while mining deep veins.",
 		},
 		perk = {
 			[401] = "Minor bonus",
@@ -43,14 +43,20 @@ local profSpecs = {
 
 local traits = {
 	nodes = {
-		[301] = { currentRank = 1, maxRanks = 2, isVisible = true },
-		[302] = { currentRank = 0, maxRanks = 40, isVisible = true },
+		[301] = { currentRank = 1, maxRanks = 2, isVisible = true, activeEntry = { entryID = 911 } },
+		[302] = { currentRank = 0, maxRanks = 40, isVisible = true, activeEntry = { entryID = 912 } },
 	},
 	unlockEntry = { [301] = 901, [302] = 902 },
 	spendEntry = { [301] = 911, [302] = 912 },
 	entries = {
 		[901] = { maxRanks = 1 },
 		[902] = { maxRanks = 1 },
+		[911] = { definitionID = 1001 },
+		[912] = { definitionID = 1002 },
+	},
+	definitions = {
+		[1001] = { overrideName = "Over-LODED Core", spellID = 50001 },
+		[1002] = { overrideName = "Deep Veins", spellID = 50002 },
 	},
 }
 
@@ -121,6 +127,18 @@ function M.install()
 		end,
 		GetEntryInfo = function(_, entryID)
 			return traits.entries[entryID]
+		end,
+		GetDefinitionInfo = function(definitionID)
+			return traits.definitions[definitionID]
+		end,
+	}
+
+	_G.TalentUtil = {
+		GetTalentName = function(overrideName, spellID)
+			if overrideName and overrideName ~= "" then
+				return overrideName
+			end
+			return ""
 		end,
 	}
 

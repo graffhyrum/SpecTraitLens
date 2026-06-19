@@ -33,7 +33,7 @@ function RowDisplay.PerkBadgeParts(row)
 	if row.unlockRank then
 		parts[#parts + 1] = "Rank " .. row.unlockRank
 	end
-	if row.isEarned then
+	if PL.RowProgress.IsEarned(row) then
 		parts[#parts + 1] = "Earned"
 	end
 	return parts

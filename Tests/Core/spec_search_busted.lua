@@ -26,6 +26,8 @@ describe("SpecIndex", function()
 			end
 		end
 		assert.is_true(deepPath ~= nil)
+		assert.are.equal("Deep Veins", deepPath.name)
+		assert.is_false(deepPath.name:find("Grants bonuses", 1, true) ~= nil)
 		assert.is_true(deepPath.searchableText:find("Multicraft", 1, true) ~= nil)
 	end)
 end)
@@ -60,6 +62,101 @@ describe("SpecSearch", function()
 		assert.are.equal(1, perks)
 		assert.is_true(#filtered > 1)
 	end)
+
+	it("filters unearned rows with ancestor promotion", function()
+		local pl = load_addon.pl()
+		local rows = allRows()
+		local filtered = pl.SpecSearch.Filter(rows, { unearnedOnly = true })
+		assert.are.equal(#rows, #filtered)
+
+		for i = 1, #filtered do
+			local row = filtered[i]
+			if row.kind == "perk" or row.kind == "path" then
+				assert.is_true(pl.RowProgress.IsUnearned(row))
+			end
+		end
+
+		local hasTab = false
+		for i = 1, #filtered do
+			if filtered[i].kind == "tab" then
+				hasTab = true
+				break
+			end
+		end
+		assert.is_true(hasTab)
+
+		for i = 1, #rows do
+			if rows[i].perkID == 402 then
+				rows[i].isEarned = true
+				break
+			end
+		end
+		filtered = pl.SpecSearch.Filter(rows, { unearnedOnly = true })
+		local earnedMajorVisible = false
+		for i = 1, #filtered do
+			if filtered[i].perkID == 402 then
+				earnedMajorVisible = true
+			end
+		end
+		assert.is_false(earnedMajorVisible)
+		assert.is_true(#filtered > 0)
+	end)
+end)
+
+describe("RowProgress", function()
+	before_each(function()
+		load_addon.reset()
+		load_addon.load_core()
+	end)
+
+	it("classifies unearned state per row kind", function()
+		local pl = load_addon.pl()
+		local rp = pl.RowProgress
+		assert.is_false(rp.IsUnearned({ kind = "tab" }))
+		assert.is_true(rp.IsUnearned({ kind = "path", isCompleted = false }))
+		assert.is_true(rp.IsUnearned({ kind = "path", isCompleted = nil }))
+		assert.is_false(rp.IsUnearned({ kind = "path", isCompleted = true }))
+		assert.is_true(rp.IsUnearned({ kind = "perk", isEarned = false }))
+		assert.is_false(rp.IsUnearned({ kind = "perk", isEarned = true }))
+	end)
+
+	it("classifies completed paths only", function()
+		local pl = load_addon.pl()
+		local rp = pl.RowProgress
+		assert.is_false(rp.IsCompleted({ kind = "tab", isCompleted = true }))
+		assert.is_false(rp.IsCompleted({ kind = "perk", isCompleted = true }))
+		assert.is_false(rp.IsCompleted({ kind = "path", isCompleted = false }))
+		assert.is_true(rp.IsCompleted({ kind = "path", isCompleted = true }))
+	end)
+
+	it("classifies earned perks only", function()
+		local pl = load_addon.pl()
+		local rp = pl.RowProgress
+		assert.is_false(rp.IsEarned({ kind = "tab", isEarned = true }))
+		assert.is_false(rp.IsEarned({ kind = "path", isEarned = true }))
+		assert.is_false(rp.IsEarned({ kind = "perk", isEarned = false }))
+		assert.is_true(rp.IsEarned({ kind = "perk", isEarned = true }))
+	end)
+
+	it("matches fixture index row progress flags", function()
+		local pl = load_addon.pl()
+		local rows = pl.SpecIndex.Build(pl.ProfessionContext.GetContextForSkillLine(2881))
+		local rp = pl.RowProgress
+		for i = 1, #rows do
+			local row = rows[i]
+			if row.kind == "tab" then
+				assert.is_false(rp.IsUnearned(row))
+				assert.is_false(rp.IsCompleted(row))
+				assert.is_false(rp.IsEarned(row))
+			elseif row.kind == "path" then
+				assert.is_true(rp.IsUnearned(row))
+				assert.is_false(rp.IsCompleted(row))
+			elseif row.kind == "perk" then
+				assert.is_true(rp.IsUnearned(row))
+				assert.is_false(rp.IsEarned(row))
+			end
+		end
+	end)
 end)
 
 describe("RowDisplay", function()
@@ -78,6 +175,14 @@ describe("RowDisplay", function()
 	it("prefers Blizzard name over fallback", function()
 		local pl = load_addon.pl()
 		assert.are.equal("Seams", pl.RowDisplay.DisplayName({ kind = "path", name = "Seams" }))
+	end)
+
+	it("includes Earned in perk badge via RowProgress", function()
+		local pl = load_addon.pl()
+		local earned = pl.RowDisplay.PerkBadgeText({ kind = "perk", isEarned = true, isMajorPerk = false })
+		local unearned = pl.RowDisplay.PerkBadgeText({ kind = "perk", isEarned = false, isMajorPerk = false })
+		assert.is_true(earned:find("Earned", 1, true) ~= nil)
+		assert.is_false(unearned:find("Earned", 1, true) ~= nil)
 	end)
 end)
 

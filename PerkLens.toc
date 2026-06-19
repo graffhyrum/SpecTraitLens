@@ -36,6 +36,8 @@ core\ProfessionContext.lua
 
 core\RankUtil.lua
 
+core\RowProgress.lua
+
 core\RowDisplay.lua
 
 core\SpecIndex.lua

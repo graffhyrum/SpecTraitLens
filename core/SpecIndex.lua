@@ -14,20 +14,38 @@ local function firstLine(text)
 	return line or text
 end
 
-local function pathName(configID, pathID, description, nodeInfo)
-	local name = firstLine(description)
+local function talentNameFromEntry(configID, entryID)
+	if not entryID or not TalentUtil then
+		return ""
+	end
+	local entryInfo = C_Traits.GetEntryInfo(configID, entryID)
+	local definitionID = entryInfo and entryInfo.definitionID
+	local defInfo = definitionID and C_Traits.GetDefinitionInfo(definitionID)
+	if defInfo then
+		return TalentUtil.GetTalentName(defInfo.overrideName, defInfo.spellID) or ""
+	end
+	return ""
+end
+
+local function talentNameForPath(configID, pathID, nodeInfo)
+	if not TalentUtil then
+		return ""
+	end
+	nodeInfo = nodeInfo or C_Traits.GetNodeInfo(configID, pathID)
+	local activeEntryID = nodeInfo and nodeInfo.activeEntry and nodeInfo.activeEntry.entryID
+	local name = talentNameFromEntry(configID, activeEntryID)
 	if name ~= "" then
 		return name
 	end
-	if nodeInfo and nodeInfo.isVisible and TalentUtil then
-		local spendEntry = C_ProfSpecs.GetSpendEntryForPath(pathID)
-		local entryInfo = spendEntry and C_Traits.GetEntryInfo(configID, spendEntry)
-		local defInfo = entryInfo and entryInfo.definitionID and C_Traits.GetDefinitionInfo(entryInfo.definitionID)
-		if defInfo then
-			return TalentUtil.GetTalentName(defInfo.overrideName, defInfo.spellID) or ""
-		end
+	name = talentNameFromEntry(configID, C_ProfSpecs.GetSpendEntryForPath(pathID))
+	if name ~= "" then
+		return name
 	end
-	return ""
+	return talentNameFromEntry(configID, C_ProfSpecs.GetUnlockEntryForPath(pathID))
+end
+
+local function pathName(configID, pathID, nodeInfo)
+	return talentNameForPath(configID, pathID, nodeInfo)
 end
 
 local function walkPath(rows, configID, skillLineID, tabTreeID, pathID, tabName, depth, parentPathID)
@@ -79,7 +97,7 @@ local function walkPath(rows, configID, skillLineID, tabTreeID, pathID, tabName,
 		depth = depth,
 		parentPathID = parentPathID,
 		pathID = pathID,
-		name = pathName(configID, pathID, description, nodeInfo),
+		name = pathName(configID, pathID, nodeInfo),
 		description = description,
 		searchableText = searchableText,
 		state = pathState,

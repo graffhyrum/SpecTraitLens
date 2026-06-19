@@ -22,6 +22,9 @@ _Avoid in UI_: trait point, rank bonus
 Flat list from `C_ProfSpecs` + `C_Traits` via `SpecIndex.Build`.
 _Avoid in UI_: trait index, trait browser
 
+**RowProgress**:
+Progress seam — `IsUnearned`, `IsCompleted`, and `IsEarned` centralize earned/completed semantics for index rows.
+
 **RowDisplay**:
 UI seam — `DisplayName` and `PerkBadgeText` map row kinds to player-facing labels.
 

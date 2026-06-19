@@ -15,19 +15,6 @@ local function rowMatches(row, query)
 	return hay:find(query, 1, true) ~= nil
 end
 
-local function isUnearned(row)
-	if row.kind == "tab" then
-		return false
-	end
-	if row.kind == "path" then
-		return row.isCompleted ~= true
-	end
-	if row.kind == "perk" then
-		return row.isEarned ~= true
-	end
-	return false
-end
-
 local function promoteTab(rows, visible, tabName)
 	for i = 1, #rows do
 		local tabRow = rows[i]
@@ -87,7 +74,7 @@ function SpecSearch.Filter(rows, options)
 		if majorOnly and (row.kind ~= "perk" or not row.isMajorPerk) then
 			ok = false
 		end
-		if ok and unearnedOnly and not isUnearned(row) then
+		if ok and unearnedOnly and not PL.RowProgress.IsUnearned(row) then
 			ok = false
 		end
 		if ok and query ~= "" and not rowMatches(row, query) then
