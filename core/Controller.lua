@@ -227,7 +227,13 @@ end
 
 function Controller:SetSkillLine(skillLineID)
 	self:GetCharDB().lastSkillLineID = skillLineID
-	PL.ProfessionContext.EnsureSkillLineLoaded(skillLineID)
+	local synced = false
+	if viewMode == "standalone" and PL.ProfessionContext.IsOnTargetParentProfession(skillLineID) then
+		synced = PL.ProfessionContext.ApplyProfessionFrameUpdate(skillLineID, false)
+	end
+	if not synced then
+		PL.ProfessionContext.EnsureSkillLineLoaded(skillLineID)
+	end
 	self:InvalidateIndex()
 	if PL.ProfessionContext.ProfessionDataReady() then
 		self:Refresh()

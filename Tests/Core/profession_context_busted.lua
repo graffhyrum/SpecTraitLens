@@ -624,4 +624,147 @@ describe("Controller standalone profession switch", function()
 		assert.are.equal(2801, pl.Controller:GetContext().skillLineID)
 		assert.are.equal("Dragon Eng Spec", pl.Controller:GetVisibleRows()[1].name)
 	end)
+
+	it("standalone expansion switch uses ApplyProfessionFrameUpdate when frame is available", function()
+		local pl = load_addon.pl()
+		local activeChild = 2911
+		local setProfessionInfoCalls = 0
+		local configs = { [2911] = 111, [2801] = 101 }
+		local tabs = {
+			[2911] = { 501 },
+			[2801] = { 502 },
+		}
+		local tabInfo = {
+			[501] = { rootNodeID = 601, name = "Midnight Eng Spec", description = "" },
+			[502] = { rootNodeID = 602, name = "Dragon Eng Spec", description = "" },
+		}
+
+		_G.GetProfessions = function()
+			return 1
+		end
+		_G.GetProfessionInfo = function()
+			return "Engineering", nil, 1, 100, 0, 0, 202
+		end
+		_G.Professions = {
+			GetProfessionInfo = function()
+				return { professionID = activeChild, parentProfessionID = 202 }
+			end,
+			GetCurrentFilterSet = function()
+				return { professionInfo = { professionID = activeChild } }
+			end,
+		}
+		_G.ProfessionsFrame = {
+			recipesFilters = { professionInfo = { professionID = 2911 } },
+			SetProfessionInfo = function()
+				setProfessionInfoCalls = setProfessionInfoCalls + 1
+			end,
+		}
+		_G.C_TradeSkillUI.GetAllProfessionTradeSkillLines = function()
+			return { 2911, 2801 }
+		end
+		_G.C_TradeSkillUI.GetChildProfessionInfo = function()
+			return { professionID = activeChild }
+		end
+		_G.C_TradeSkillUI.GetBaseProfessionInfo = function()
+			return { professionID = 202 }
+		end
+		_G.C_TradeSkillUI.IsDataSourceChanging = function()
+			return false
+		end
+		_G.C_TradeSkillUI.SetProfessionChildSkillLineID = function(skillLineID)
+			activeChild = skillLineID
+		end
+		_G.C_TradeSkillUI.GetProfessionInfoBySkillLineID = function(skillLineID)
+			return {
+				professionName = skillLineID == 2911 and "Midnight Engineering" or "Dragon Isles Engineering",
+				parentProfessionID = 202,
+				sourceCounter = skillLineID == 2911 and 1 or 3,
+			}
+		end
+		_G.C_ProfSpecs.SkillLineHasSpecialization = function()
+			return true
+		end
+		_G.C_ProfSpecs.GetConfigIDForSkillLine = function(skillLineID)
+			if skillLineID == activeChild then
+				return configs[skillLineID] or 0
+			end
+			return 0
+		end
+		_G.C_ProfSpecs.GetSpecTabIDsForSkillLine = function(skillLineID)
+			return tabs[skillLineID] or {}
+		end
+		_G.C_ProfSpecs.GetTabInfo = function(tabID)
+			return tabInfo[tabID]
+		end
+		_G.C_ProfSpecs.GetChildrenForPath = function()
+			return {}
+		end
+		_G.C_ProfSpecs.GetPerksForPath = function()
+			return {}
+		end
+		_G.C_ProfSpecs.GetDescriptionForPath = function()
+			return ""
+		end
+
+		pl.Controller:SetViewMode("standalone")
+		pl.Controller:RebuildIndex()
+		pl.Controller:SetSkillLine(2801)
+
+		assert.are.equal(1, setProfessionInfoCalls)
+		assert.are.equal(2801, pl.Controller:GetContext().skillLineID)
+		assert.are.equal(2801, _G.ProfessionsFrame.recipesFilters.professionInfo.professionID)
+	end)
+end)
+
+describe("ProfessionContext.ApplyProfessionFrameUpdate", function()
+	before_each(function()
+		load_addon.reset()
+		load_addon.load_core()
+	end)
+
+	it("syncs cached recipe filters after a successful frame update", function()
+		local pl = load_addon.pl()
+		local activeChild = 2881
+		local setProfessionInfoCalls = 0
+
+		_G.Professions = {
+			GetProfessionInfo = function()
+				return { professionID = activeChild, parentProfessionID = 186 }
+			end,
+			GetCurrentFilterSet = function()
+				return { professionInfo = { professionID = activeChild } }
+			end,
+		}
+		_G.ProfessionsFrame = {
+			recipesFilters = { professionInfo = { professionID = 2881 } },
+			craftingOrdersFilters = { professionInfo = { professionID = 2881 } },
+			SetProfessionInfo = function()
+				setProfessionInfoCalls = setProfessionInfoCalls + 1
+			end,
+		}
+		_G.C_TradeSkillUI = {
+			IsDataSourceChanging = function()
+				return false
+			end,
+			GetBaseProfessionInfo = function()
+				return { professionID = 186 }
+			end,
+			GetChildProfessionInfo = function()
+				return { professionID = activeChild }
+			end,
+			SetProfessionChildSkillLineID = function(skillLineID)
+				activeChild = skillLineID
+			end,
+			GetProfessionInfoBySkillLineID = function(skillLineID)
+				return { parentProfessionID = 186, sourceCounter = skillLineID == 2883 and 1 or 3 }
+			end,
+		}
+
+		local ok = pl.ProfessionContext.ApplyProfessionFrameUpdate(2883, false)
+
+		assert.is_true(ok)
+		assert.are.equal(1, setProfessionInfoCalls)
+		assert.are.equal(2883, _G.ProfessionsFrame.recipesFilters.professionInfo.professionID)
+		assert.are.equal(2883, _G.ProfessionsFrame.craftingOrdersFilters.professionInfo.professionID)
+	end)
 end)

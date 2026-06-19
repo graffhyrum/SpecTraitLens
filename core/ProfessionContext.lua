@@ -110,6 +110,20 @@ function ProfessionContext.EnsureSkillLineLoaded(skillLineID)
 	return true
 end
 
+local function syncProfessionsFrameFilterCache()
+	if not ProfessionsFrame or not Professions or not Professions.GetCurrentFilterSet then
+		return
+	end
+	local filterSet = Professions.GetCurrentFilterSet()
+	if ProfessionsFrame.recipesFilters ~= nil then
+		ProfessionsFrame.recipesFilters = filterSet
+	end
+	local ordersFilters = ProfessionsFrame.craftingOrdersFilters
+	if ordersFilters and ordersFilters.professionInfo then
+		ordersFilters.professionInfo = filterSet.professionInfo
+	end
+end
+
 function ProfessionContext.ApplyProfessionFrameUpdate(skillLineID, openSpecTab)
 	if not skillLineID or not ProfessionContext.ProfessionDataReady() then
 		return false
@@ -130,6 +144,7 @@ function ProfessionContext.ApplyProfessionFrameUpdate(skillLineID, openSpecTab)
 	professionInfo.openRecipeID = nil
 	professionInfo.openSpecTab = openSpecTab == true
 	ProfessionsFrame:SetProfessionInfo(professionInfo, false)
+	syncProfessionsFrameFilterCache()
 	return true
 end
 
