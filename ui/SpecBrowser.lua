@@ -39,6 +39,12 @@ local function initProfessionDropdown(_, level)
 end
 
 local function refreshProfessionSelector(browser)
+	if browser.isEmbedded then
+		browser.profDropdown:Hide()
+		browser.header:Hide()
+		return
+	end
+
 	local professions = PL.Controller:ListProfessions()
 	local ctx = PL.Controller:GetContext()
 
@@ -230,18 +236,86 @@ local function layoutRows(browser)
 	content:SetHeight(math.max(y, 1))
 end
 
+local function applyChromeLayout(browser)
+	local search = browser.search
+	local major = browser.major
+	local unearned = browser.unearned
+	local divider = browser.divider
+	local scrollBg = browser.scrollBg
+	local scroll = browser.scroll
+
+	if browser.isEmbedded then
+		browser.header:Hide()
+		browser.profDropdown:Hide()
+		browser.kpLabel:Hide()
+		browser.searchLabel:Hide()
+
+		search:ClearAllPoints()
+		search:SetSize(220, 22)
+		search:SetPoint("TOPLEFT", 72, -32)
+
+		major:ClearAllPoints()
+		major:SetPoint("LEFT", search, "RIGHT", 14, 0)
+
+		unearned:ClearAllPoints()
+		unearned:SetPoint("LEFT", major.text, "RIGHT", 12, 0)
+
+		divider:ClearAllPoints()
+		divider:SetPoint("TOPLEFT", 12, -64)
+		divider:SetPoint("TOPRIGHT", -12, -64)
+		divider:SetHeight(1)
+
+		scrollBg:ClearAllPoints()
+		scrollBg:SetPoint("TOPLEFT", 10, -66)
+		scrollBg:SetPoint("BOTTOMRIGHT", -10, 10)
+
+		scroll:ClearAllPoints()
+		scroll:SetPoint("TOPLEFT", 14, -70)
+		scroll:SetPoint("BOTTOMRIGHT", -30, 14)
+		return
+	end
+
+	browser.kpLabel:Show()
+	browser.searchLabel:Hide()
+
+	search:ClearAllPoints()
+	search:SetSize(240, 22)
+	search:SetPoint("TOPLEFT", 18, -74)
+
+	major:ClearAllPoints()
+	major:SetPoint("LEFT", search, "RIGHT", 14, 0)
+
+	unearned:ClearAllPoints()
+	unearned:SetPoint("LEFT", major.text, "RIGHT", 12, 0)
+
+	divider:ClearAllPoints()
+	divider:SetPoint("TOPLEFT", 12, -62)
+	divider:SetPoint("TOPRIGHT", -12, -62)
+	divider:SetHeight(1)
+
+	scrollBg:ClearAllPoints()
+	scrollBg:SetPoint("TOPLEFT", 10, -100)
+	scrollBg:SetPoint("BOTTOMRIGHT", -10, 10)
+
+	scroll:ClearAllPoints()
+	scroll:SetPoint("TOPLEFT", 14, -104)
+	scroll:SetPoint("BOTTOMRIGHT", -30, 14)
+end
+
 local function buildChrome(browser)
 	if browser.built then
 		return
 	end
 	browser.built = true
 
-	local headerBg = browser:CreateTexture(nil, "BACKGROUND", nil, 1)
-	headerBg:SetColorTexture(0.04, 0.04, 0.06, 0.85)
-	headerBg:SetPoint("TOPLEFT", 10, -10)
-	headerBg:SetPoint("TOPRIGHT", -10, -10)
-	headerBg:SetHeight(52)
-	browser.headerBg = headerBg
+	if not browser.isEmbedded then
+		local headerBg = browser:CreateTexture(nil, "BACKGROUND", nil, 1)
+		headerBg:SetColorTexture(0.04, 0.04, 0.06, 0.85)
+		headerBg:SetPoint("TOPLEFT", 10, -10)
+		headerBg:SetPoint("TOPRIGHT", -10, -10)
+		headerBg:SetHeight(52)
+		browser.headerBg = headerBg
+	end
 
 	local header = browser:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 	header:SetPoint("TOPLEFT", 18, -18)
@@ -271,9 +345,10 @@ local function buildChrome(browser)
 	searchLabel:SetPoint("TOPLEFT", 18, -74)
 	searchLabel:SetText("Search")
 	searchLabel:SetTextColor(0.7, 0.7, 0.7)
+	browser.searchLabel = searchLabel
 
 	local search = CreateFrame("EditBox", nil, browser, "InputBoxTemplate")
-	search:SetSize(300, 22)
+	search:SetSize(240, 22)
 	search:SetPoint("TOPLEFT", 18, -90)
 	search:SetAutoFocus(false)
 	search:SetScript("OnTextChanged", function(self)
@@ -285,7 +360,7 @@ local function buildChrome(browser)
 	browser.search = search
 
 	local major = CreateFrame("CheckButton", nil, browser, "UICheckButtonTemplate")
-	major:SetPoint("TOPLEFT", 18, -122)
+	major:SetPoint("LEFT", search, "RIGHT", 14, 0)
 	major.text = major:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	major.text:SetPoint("LEFT", major, "RIGHT", 0, 0)
 	major.text:SetText("Major pips only")
@@ -295,7 +370,7 @@ local function buildChrome(browser)
 	browser.major = major
 
 	local unearned = CreateFrame("CheckButton", nil, browser, "UICheckButtonTemplate")
-	unearned:SetPoint("TOPLEFT", 200, -122)
+	unearned:SetPoint("LEFT", major.text, "RIGHT", 12, 0)
 	unearned.text = unearned:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	unearned.text:SetPoint("LEFT", unearned, "RIGHT", 0, 0)
 	unearned.text:SetText("Unearned only")
@@ -306,12 +381,12 @@ local function buildChrome(browser)
 
 	local scrollBg = browser:CreateTexture(nil, "BACKGROUND", nil, 0)
 	scrollBg:SetColorTexture(0.02, 0.02, 0.03, 0.55)
-	scrollBg:SetPoint("TOPLEFT", 10, -150)
+	scrollBg:SetPoint("TOPLEFT", 10, -100)
 	scrollBg:SetPoint("BOTTOMRIGHT", -10, 10)
 	browser.scrollBg = scrollBg
 
 	local scroll = CreateFrame("ScrollFrame", nil, browser, "UIPanelScrollFrameTemplate")
-	scroll:SetPoint("TOPLEFT", 14, -154)
+	scroll:SetPoint("TOPLEFT", 14, -104)
 	scroll:SetPoint("BOTTOMRIGHT", -30, 14)
 	browser.scroll = scroll
 
@@ -322,6 +397,8 @@ local function buildChrome(browser)
 	browser.contentWidth = CONTENT_WIDTH
 	browser.pool = {}
 
+	applyChromeLayout(browser)
+
 	PL.Controller.RegisterCallback(function()
 		if browser:IsShown() then
 			SpecBrowser:Update(browser)
@@ -331,13 +408,19 @@ end
 
 function SpecBrowser:Update(browser)
 	buildChrome(browser)
-	local ctx = PL.Controller:GetContext()
-	local kp = PL.Controller:GetKnowledgeAvailable()
+	applyChromeLayout(browser)
 	refreshProfessionSelector(browser)
-	if ctx then
-		browser.kpLabel:SetText("Knowledge: " .. kp)
+	if browser.isEmbedded then
+		browser.kpLabel:Hide()
 	else
-		browser.kpLabel:SetText("")
+		local ctx = PL.Controller:GetContext()
+		local kp = PL.Controller:GetKnowledgeAvailable()
+		browser.kpLabel:Show()
+		if ctx then
+			browser.kpLabel:SetText("Knowledge: " .. kp)
+		else
+			browser.kpLabel:SetText("")
+		end
 	end
 	browser.search:SetText(PL.Controller:GetSearchText())
 	browser.major:SetChecked(PL.Controller:GetMajorPipsOnly())
@@ -387,6 +470,7 @@ function SpecBrowser:CreateStandalone()
 	local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
 	close:SetPoint("TOPRIGHT", -2, -2)
 
+	f.isEmbedded = false
 	self.standalone = f
 	instances[#instances + 1] = f
 	return f
@@ -398,6 +482,9 @@ function SpecBrowser:CreateEmbedded(parent)
 	end
 	local f = CreateFrame("Frame", nil, parent)
 	f:SetAllPoints(parent)
+	f:SetFrameStrata("HIGH")
+	f:SetFrameLevel(900)
+	f.isEmbedded = true
 	f:Hide()
 	f:SetScript("OnShow", function()
 		PL.Controller:SetListening(true)

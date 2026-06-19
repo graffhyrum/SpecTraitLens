@@ -103,7 +103,11 @@ end
 
 function Controller:RebuildIndex()
 	local charDB = self:GetCharDB()
-	if charDB.lastSkillLineID then
+	local preferActive = PL.ProfessionsHook and PL.ProfessionsHook:IsIndexMode()
+	if preferActive then
+		context = PL.ProfessionContext.GetActiveContext()
+	end
+	if not context and charDB.lastSkillLineID then
 		context = PL.ProfessionContext.GetContextForSkillLine(charDB.lastSkillLineID)
 	end
 	if not context then

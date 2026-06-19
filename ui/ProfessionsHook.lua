@@ -12,6 +12,24 @@ local TAB_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 local TAB_ANCHOR_X = 0
 local TAB_ANCHOR_Y = -128
 
+local SPEC_CHROME_KEYS = {
+	"TreeView",
+	"DetailedView",
+	"TreePreview",
+	"ButtonsParent",
+	"VerticalDivider",
+	"TopDivider",
+	"PanelFooter",
+	"ApplyButton",
+	"UnlockTabButton",
+	"UndoButton",
+	"ViewTreeButton",
+	"BackToPreviewButton",
+	"ViewPreviewButton",
+	"BackToFullTreeButton",
+	"FxModelScene",
+}
+
 local function isSpecTabActive()
 	if not ProfessionsFrame or not specTabID then
 		return false
@@ -19,19 +37,64 @@ local function isSpecTabActive()
 	return ProfessionsFrame.GetTab and ProfessionsFrame:GetTab() == specTabID
 end
 
-local function setBlizzardSpecVisible(visible)
-	local specPage = ProfessionsFrame and ProfessionsFrame.SpecPage
+local function getSpecPage()
+	return ProfessionsFrame and ProfessionsFrame.SpecPage
+end
+
+local function setFrameShown(frame, visible)
+	if frame then
+		frame:SetShown(visible)
+	end
+end
+
+local function forEachPoolEntry(pool, fn)
+	if not pool or not pool.EnumerateActive then
+		return
+	end
+	for entry in pool:EnumerateActive() do
+		fn(entry)
+	end
+end
+
+local function setBlizzardSpecChromeVisible(visible)
+	local specPage = getSpecPage()
 	if not specPage then
 		return
 	end
-	if specPage.TreeView then
-		specPage.TreeView:SetShown(visible)
+
+	for i = 1, #SPEC_CHROME_KEYS do
+		setFrameShown(specPage[SPEC_CHROME_KEYS[i]], visible)
 	end
-	if specPage.DetailedView then
-		specPage.DetailedView:SetShown(visible)
+
+	forEachPoolEntry(specPage.tabsPool, function(tab)
+		tab:SetShown(visible)
+	end)
+	forEachPoolEntry(specPage.perksPool, function(perk)
+		perk:SetShown(visible)
+	end)
+end
+
+local function restoreBlizzardSpecUI()
+	local specPage = getSpecPage()
+	if not specPage then
+		return
 	end
-	if specPage.TreePreview then
-		specPage.TreePreview:SetShown(visible)
+
+	setBlizzardSpecChromeVisible(true)
+
+	local treeID = specPage.GetTalentTreeID and specPage:GetTalentTreeID()
+	if treeID and specPage.SetSelectedTab then
+		specPage:SetSelectedTab(treeID)
+		return
+	end
+
+	if specPage.UpdateSelectedTabState then
+		specPage:UpdateSelectedTabState()
+	end
+	if specPage.TreePreview and specPage.GetTalentTreeID and specPage.GetConfigID then
+		local isLocked = C_ProfSpecs.GetStateForTab(specPage:GetTalentTreeID(), specPage:GetConfigID())
+			~= Enum.ProfessionsSpecTabState.Unlocked
+		specPage.TreePreview:SetShown(isLocked)
 	end
 end
 
@@ -47,17 +110,31 @@ local function updateIndexTab()
 end
 
 local function applyIndexMode(enabled)
+	local wasIndexMode = indexMode
 	indexMode = enabled == true
 	if not isSpecTabActive() then
 		indexMode = false
 	end
-	setBlizzardSpecVisible(not indexMode)
+
+	if indexMode then
+		setBlizzardSpecChromeVisible(false)
+		local active = PL.ProfessionContext.GetActiveContext()
+		if active then
+			PL.Controller:SetSkillLine(active.skillLineID)
+		else
+			PL.Controller:InvalidateIndex()
+			PL.Controller:Refresh()
+		end
+	else
+		if wasIndexMode then
+			restoreBlizzardSpecUI()
+		else
+			setBlizzardSpecChromeVisible(true)
+		end
+	end
+
 	PL.SpecBrowser:SetEmbeddedVisible(indexMode)
 	updateIndexTab()
-	if indexMode then
-		PL.Controller:InvalidateIndex()
-		PL.Controller:Refresh()
-	end
 end
 
 local function onTabSet(_, frame, tabID)
