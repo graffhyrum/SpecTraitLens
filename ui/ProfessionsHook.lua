@@ -9,6 +9,7 @@ local specTabID
 local indexTab
 local pendingNav
 local navFrame
+local updateIndexTab
 
 local TAB_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 local TAB_ANCHOR_X = 0
@@ -44,6 +45,17 @@ end
 
 local function getSpecPage()
 	return ProfessionsFrame and ProfessionsFrame.SpecPage
+end
+
+updateIndexTab = function()
+	if not indexTab then
+		return
+	end
+	local show = ProfessionsFrame and ProfessionsFrame:IsShown() and isSpecTabActive()
+	indexTab:SetShown(show)
+	if indexTab.SelectedTexture then
+		indexTab.SelectedTexture:SetShown(indexMode)
+	end
 end
 
 local function setFrameShown(frame, visible)
@@ -140,17 +152,6 @@ local function exitIndexOverlay()
 	indexMode = false
 	PL.SpecBrowser:SetEmbeddedVisible(false)
 	updateIndexTab()
-end
-
-local function updateIndexTab()
-	if not indexTab then
-		return
-	end
-	local show = ProfessionsFrame and ProfessionsFrame:IsShown() and isSpecTabActive()
-	indexTab:SetShown(show)
-	if indexTab.SelectedTexture then
-		indexTab.SelectedTexture:SetShown(indexMode)
-	end
 end
 
 local function specPageMatchesTarget(specPage, target)
