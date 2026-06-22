@@ -1,18 +1,19 @@
-local PL = _G.PerkLens
+local PTS = _G.ProfessionTraitSearch
 
 local MinimapButton = {}
-PL.MinimapButton = MinimapButton
+PTS.MinimapButton = MinimapButton
 
-local ICON = "Interface\\Icons\\INV_Misc_Book_09"
+local ICON = PTS.ADDON_ICON
+local ADDON_LABEL = "Profession Trait Search"
 
 local function tooltipText(tooltip)
 	if not tooltip or not tooltip.AddLine then
 		return
 	end
-	tooltip:AddLine("PerkLens")
+	tooltip:AddLine(ADDON_LABEL)
 	tooltip:AddLine("Left-click: specialization index")
 	tooltip:AddLine("Right-click: settings")
-	local ctx = PL.Controller:GetContext()
+	local ctx = PTS.Controller:GetContext()
 	if ctx then
 		tooltip:AddLine(ctx.professionName, 0.4, 1, 0.4)
 	end
@@ -24,24 +25,24 @@ function MinimapButton:Init()
 	end
 	self.initialized = true
 
-	local db = PL.Controller:GetSavedDB()
+	local db = PTS.Controller:GetSavedDB()
 	db.minimap = db.minimap or { hide = false }
 
-	local ldb = LibStub("LibDataBroker-1.1"):NewDataObject("PerkLens", {
+	local ldb = LibStub("LibDataBroker-1.1"):NewDataObject("ProfessionTraitSearch", {
 		type = "launcher",
-		text = "PerkLens",
+		text = ADDON_LABEL,
 		icon = ICON,
 		OnClick = function(_, button)
 			if button == "RightButton" then
-				PL.Settings:Toggle()
+				PTS.Settings:Toggle()
 			else
-				PL.SpecBrowser:ToggleStandalone()
+				PTS.SpecBrowser:ToggleStandalone()
 			end
 		end,
 		OnTooltipShow = tooltipText,
 	})
 
 	local icon = LibStub("LibDBIcon-1.0")
-	icon:Register("PerkLens", ldb, db.minimap)
-	icon:Show("PerkLens")
+	icon:Register("ProfessionTraitSearch", ldb, db.minimap)
+	icon:Show("ProfessionTraitSearch")
 end

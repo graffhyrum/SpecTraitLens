@@ -1,7 +1,7 @@
-local PL = _G.PerkLens
+local PTS = _G.ProfessionTraitSearch
 
 local Settings = {}
-PL.Settings = Settings
+PTS.Settings = Settings
 
 local frame
 
@@ -9,7 +9,7 @@ local function buildFrame()
 	if frame then
 		return frame
 	end
-	frame = CreateFrame("Frame", "PerkLensSettings", UIParent, "BackdropTemplate")
+	frame = CreateFrame("Frame", "ProfessionTraitSearchSettings", UIParent, "BackdropTemplate")
 	frame:SetSize(360, 200)
 	frame:SetPoint("CENTER")
 	frame:SetBackdrop({
@@ -30,7 +30,7 @@ local function buildFrame()
 
 	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 	title:SetPoint("TOP", 0, -16)
-	title:SetText("PerkLens")
+	title:SetText("Profession Trait Search")
 
 	local about = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	about:SetPoint("TOPLEFT", 24, -52)
@@ -38,8 +38,8 @@ local function buildFrame()
 	about:SetJustifyH("LEFT")
 	about:SetText(
 		"Searchable specialization index for profession specs. "
-			.. "Open with /pl or the minimap button. "
-			.. "Toggle Specialization Index on the Professions Specializations page."
+			.. "Open with /pts or the minimap button. "
+			.. "Toggle Specialization Index from the side tab on any Professions tab."
 	)
 
 	local openBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
@@ -47,7 +47,7 @@ local function buildFrame()
 	openBtn:SetPoint("BOTTOM", 0, 24)
 	openBtn:SetText("Open Browser")
 	openBtn:SetScript("OnClick", function()
-		PL.SpecBrowser:ShowStandalone()
+		PTS.SpecBrowser:ShowStandalone()
 	end)
 
 	local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")

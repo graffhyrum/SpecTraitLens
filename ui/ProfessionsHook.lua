@@ -1,164 +1,98 @@
-local PL = _G.PerkLens
+local PTS = _G.ProfessionTraitSearch
 
 local ProfessionsHook = {}
-PL.ProfessionsHook = ProfessionsHook
+PTS.ProfessionsHook = ProfessionsHook
 
 local hooked = {}
 local indexMode = false
+local recipesTabID
 local specTabID
+local craftingOrdersTabID
 local indexTab
 local updateIndexTab
 
-local TAB_ICON = "Interface\\Icons\\INV_Misc_Book_09"
+local TAB_ICON = PTS.ADDON_ICON
 local TAB_ANCHOR_X = 0
 local TAB_ANCHOR_Y = -128
 
-local SPEC_CORE_KEYS = {
-	"TreeView",
-	"DetailedView",
-	"ButtonsParent",
-	"VerticalDivider",
-	"TopDivider",
-	"PanelFooter",
-	"ApplyButton",
-	"UnlockTabButton",
-	"UndoButton",
-	"FxModelScene",
-}
-
-local SPEC_STATEFUL_KEYS = {
-	"TreePreview",
-	"ViewTreeButton",
-	"BackToPreviewButton",
-	"ViewPreviewButton",
-	"BackToFullTreeButton",
-}
-
-local function isSpecTabActive()
-	if not ProfessionsFrame or not specTabID then
-		return false
-	end
-	return ProfessionsFrame.GetTab and ProfessionsFrame:GetTab() == specTabID
+local function isHostTab(tabID)
+	return tabID == recipesTabID or tabID == specTabID or tabID == craftingOrdersTabID
 end
 
-local function getSpecPage()
-	return ProfessionsFrame and ProfessionsFrame.SpecPage
+local function isSpecTab(tabID)
+	return tabID and tabID == specTabID
+end
+
+local function isHostTabActive()
+	if not ProfessionsFrame or not ProfessionsFrame.GetTab then
+		return false
+	end
+	return isHostTab(ProfessionsFrame:GetTab())
+end
+
+local function layoutIndexTab()
+	if not indexTab or not ProfessionsFrame then
+		return
+	end
+	local anchorFrame = ProfessionsFrame
+	if indexMode then
+		local popout = PTS.SpecBrowser.popout
+		if popout and popout:IsShown() then
+			anchorFrame = popout
+		end
+	end
+	indexTab:ClearAllPoints()
+	indexTab:SetPoint("TOPLEFT", anchorFrame, "TOPRIGHT", TAB_ANCHOR_X, TAB_ANCHOR_Y)
 end
 
 updateIndexTab = function()
 	if not indexTab then
 		return
 	end
-	local show = ProfessionsFrame and ProfessionsFrame:IsShown() and isSpecTabActive()
+	local show = ProfessionsFrame and ProfessionsFrame:IsShown() and isHostTabActive()
 	indexTab:SetShown(show)
-	if indexTab.SelectedTexture then
+	layoutIndexTab()
+	if indexTab.SetChecked then
+		indexTab:SetChecked(indexMode)
+	elseif indexTab.SelectedTexture then
 		indexTab.SelectedTexture:SetShown(indexMode)
 	end
 end
 
-local function setFrameShown(frame, visible)
-	if frame then
-		frame:SetShown(visible)
-	end
-end
-
-local function forEachPoolEntry(pool, fn)
-	if not pool or not pool.EnumerateActive then
+local function refreshPopout()
+	local popout = PTS.SpecBrowser.popout
+	if not popout or not popout:IsShown() then
 		return
 	end
-	for entry in pool:EnumerateActive() do
-		fn(entry)
-	end
-end
-
-local function setBlizzardSpecChromeVisible(visible)
-	local specPage = getSpecPage()
-	if not specPage then
-		return
-	end
-
-	if visible then
-		for i = 1, #SPEC_CORE_KEYS do
-			setFrameShown(specPage[SPEC_CORE_KEYS[i]], true)
-		end
-		for i = 1, #SPEC_STATEFUL_KEYS do
-			setFrameShown(specPage[SPEC_STATEFUL_KEYS[i]], false)
-		end
-	else
-		for i = 1, #SPEC_CORE_KEYS do
-			setFrameShown(specPage[SPEC_CORE_KEYS[i]], false)
-		end
-		for i = 1, #SPEC_STATEFUL_KEYS do
-			setFrameShown(specPage[SPEC_STATEFUL_KEYS[i]], false)
-		end
-	end
-
-	forEachPoolEntry(specPage.tabsPool, function(tab)
-		tab:SetShown(visible)
-	end)
-	forEachPoolEntry(specPage.perksPool, function(perk)
-		perk:SetShown(visible)
-	end)
-end
-
-local function restoreBlizzardSpecToCurrentTab()
-	local specPage = getSpecPage()
-	if not specPage then
-		return
-	end
-
-	setBlizzardSpecChromeVisible(true)
-
-	local treeID = specPage.GetTalentTreeID and specPage:GetTalentTreeID()
-	if treeID then
-		if EventRegistry and EventRegistry.TriggerEvent then
-			EventRegistry:TriggerEvent("ProfessionsSpecializations.TabSelected", treeID)
-		elseif specPage.SetSelectedTab then
-			specPage:SetSelectedTab(treeID)
-		end
-		return
-	end
-
-	if specPage.UpdateSelectedTabState then
-		specPage:UpdateSelectedTabState()
-	end
-end
-
-local function restoreBlizzardSpecUI()
-	restoreBlizzardSpecToCurrentTab()
+	PTS.Controller:InvalidateIndex()
+	PTS.Controller:Refresh()
+	PTS.SpecBrowser:Update(popout)
 end
 
 local function applyIndexMode(enabled)
-	local wasIndexMode = indexMode
 	indexMode = enabled == true
-	if not isSpecTabActive() then
+	if indexMode and not isHostTabActive() then
 		indexMode = false
 	end
 
 	if indexMode then
-		setBlizzardSpecChromeVisible(false)
-		PL.Controller:SetViewMode("embedded")
-		local active = PL.ProfessionContext.GetActiveContext()
+		PTS.Controller:SetViewMode("embedded")
+		local active = PTS.ProfessionContext.GetActiveContext()
 		if active then
-			PL.Controller:SetSkillLine(active.skillLineID)
+			PTS.Controller:SetSkillLine(active.skillLineID)
 		else
-			PL.Controller:InvalidateIndex()
-			PL.Controller:Refresh()
+			PTS.Controller:InvalidateIndex()
+			PTS.Controller:Refresh()
 		end
 	else
-		if PL.SpecBrowser.standalone and PL.SpecBrowser.standalone:IsShown() then
-			PL.Controller:SetViewMode("standalone")
+		if PTS.SpecBrowser.standalone and PTS.SpecBrowser.standalone:IsShown() then
+			PTS.Controller:SetViewMode("standalone")
 		else
-			PL.Controller:SetViewMode("closed")
-		end
-		if wasIndexMode then
-			restoreBlizzardSpecUI()
-		else
-			setBlizzardSpecChromeVisible(true)
+			PTS.Controller:SetViewMode("closed")
 		end
 	end
 
-	PL.SpecBrowser:SetEmbeddedVisible(indexMode)
+	PTS.SpecBrowser:SetPopoutVisible(indexMode)
 	updateIndexTab()
 end
 
@@ -166,7 +100,8 @@ local function onTabSet(_, frame, tabID)
 	if frame ~= ProfessionsFrame then
 		return
 	end
-	if tabID ~= specTabID then
+
+	if not isHostTab(tabID) then
 		if indexMode then
 			applyIndexMode(false)
 		else
@@ -174,24 +109,26 @@ local function onTabSet(_, frame, tabID)
 		end
 		return
 	end
+
 	updateIndexTab()
-	PL.Controller:InvalidateIndex()
-	PL.Controller:Refresh()
-	if PL.SpecBrowser.embedded and PL.SpecBrowser.embedded:IsShown() then
-		PL.SpecBrowser:Update(PL.SpecBrowser.embedded)
+	if indexMode then
+		refreshPopout()
+	elseif isSpecTab(tabID) then
+		PTS.Controller:InvalidateIndex()
+		PTS.Controller:Refresh()
 	end
 end
 
 local function onProfessionsOpen()
-	PL.Controller:SetListening(true)
+	PTS.Controller:SetListening(true)
 	updateIndexTab()
 end
 
 local function onProfessionsClose()
 	applyIndexMode(false)
 	updateIndexTab()
-	if not (PL.SpecBrowser.standalone and PL.SpecBrowser.standalone:IsShown()) then
-		PL.Controller:SetListening(false)
+	if not (PTS.SpecBrowser.standalone and PTS.SpecBrowser.standalone:IsShown()) then
+		PTS.Controller:SetListening(false)
 	end
 end
 
@@ -201,11 +138,10 @@ local function createIndexSideTab(professionsFrame)
 	end
 	local tab = CreateFrame("Frame", nil, professionsFrame, "LargeSideTabButtonTemplate")
 	tab:SetFrameStrata("HIGH")
-	tab:SetPoint("TOPLEFT", professionsFrame, "TOPRIGHT", TAB_ANCHOR_X, TAB_ANCHOR_Y)
+	tab:SetFrameLevel(20)
 	tab.tooltipText = "Specialization Index"
 	tab.Icon:SetTexture(TAB_ICON)
 	tab.Icon:SetSize(24, 24)
-	tab.SelectedTexture:SetShown(false)
 	tab:SetCustomOnMouseUpHandler(function(_, button, upInside)
 		if button == "LeftButton" and upInside then
 			applyIndexMode(not indexMode)
@@ -229,23 +165,21 @@ local function setupProfessionsFrame(frame)
 	end
 
 	createIndexSideTab(frame)
+	PTS.SpecBrowser:CreatePopout(frame)
 	updateIndexTab()
-	if frame.SpecPage then
-		PL.SpecBrowser:CreateEmbedded(frame.SpecPage)
-	end
 
+	if frame.recipesTabID then
+		recipesTabID = frame.recipesTabID
+	end
 	if frame.specializationsTabID then
 		specTabID = frame.specializationsTabID
+	end
+	if frame.craftingOrdersTabID then
+		craftingOrdersTabID = frame.craftingOrdersTabID
 	end
 end
 
 function ProfessionsHook:Init()
-	PL.ProfessionsNavigator:SetBeforeNavigate(function()
-		if indexMode then
-			applyIndexMode(false)
-		end
-	end)
-
 	local frame = CreateFrame("Frame")
 	frame:RegisterEvent("ADDON_LOADED")
 	frame:SetScript("OnEvent", function(_, event, name)
@@ -254,17 +188,11 @@ function ProfessionsHook:Init()
 		end
 		if ProfessionsFrame then
 			setupProfessionsFrame(ProfessionsFrame)
-			if ProfessionsFrame.specializationsTabID then
-				specTabID = ProfessionsFrame.specializationsTabID
-			end
 		end
 	end)
 
 	if C_AddOns and C_AddOns.IsAddOnLoaded("Blizzard_Professions") and ProfessionsFrame then
 		setupProfessionsFrame(ProfessionsFrame)
-		if ProfessionsFrame.specializationsTabID then
-			specTabID = ProfessionsFrame.specializationsTabID
-		end
 	end
 end
 
