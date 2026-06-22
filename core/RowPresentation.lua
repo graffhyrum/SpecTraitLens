@@ -1,14 +1,9 @@
-local PL = _G.PerkLens
+local PTS = _G.ProfessionTraitSearch
 
 local RowPresentation = {}
-PL.RowPresentation = RowPresentation
+PTS.RowPresentation = RowPresentation
 
 local ROW_MIN = { tab = 36, path = 44, perk = 28 }
-local ROW_TINT = {
-	tab = { 0.75, 0.6, 0.1, 0.14 },
-	path = { 1, 1, 1, 0.05 },
-	perk = { 0, 0, 0, 0.04 },
-}
 
 local FONT_OBJECT = {
 	tab = "GameFontNormalLarge",
@@ -16,8 +11,62 @@ local FONT_OBJECT = {
 	perk = "GameFontHighlightSmall",
 }
 
+local function fontRGB(fontColor, r, g, b)
+	if fontColor and fontColor.GetRGB then
+		return fontColor:GetRGB()
+	end
+	return r, g, b
+end
+
+local SEMANTIC_RGB = {
+	earned = { fontRGB(GREEN_FONT_COLOR, 0.1, 1, 0.1) },
+	inaccessible = { fontRGB(GRAY_FONT_COLOR, 0.5, 0.5, 0.5) },
+	nextTrait = { 0.55, 0.78, 1 },
+	accessible = { 1, 0.82, 0 },
+	neutral = { 1, 1, 1 },
+	structural = { 1, 1, 1 },
+	muted = { 0.72, 0.72, 0.72 },
+}
+
+local SEMANTIC_TINT = {
+	earned = { 0.1, 0.45, 0.1, 0.10 },
+	nextTrait = { 0.2, 0.4, 0.65, 0.12 },
+	accessible = { 0.75, 0.6, 0.1, 0.14 },
+	inaccessible = { 0.35, 0.35, 0.35, 0.08 },
+	neutral = { 1, 1, 1, 0.05 },
+	structural = { 0.75, 0.6, 0.1, 0.14 },
+}
+
+function RowPresentation.ProgressSemantic(row)
+	return PTS.RowAvailability.ProgressSemantic(row)
+end
+
+function RowPresentation.ProgressColor(row)
+	local key = RowPresentation.ProgressSemantic(row)
+	local rgb = SEMANTIC_RGB[key] or SEMANTIC_RGB.neutral
+	return rgb[1], rgb[2], rgb[3], key
+end
+
+function RowPresentation.HeaderColor()
+	local rgb = SEMANTIC_RGB.accessible
+	return rgb[1], rgb[2], rgb[3]
+end
+
+function RowPresentation.DetailColor()
+	local rgb = SEMANTIC_RGB.muted
+	return rgb[1], rgb[2], rgb[3]
+end
+
+function RowPresentation.KnowledgeLabelColor(available)
+	if available and available > 0 then
+		return RowPresentation.HeaderColor()
+	end
+	return RowPresentation.DetailColor()
+end
+
 function RowPresentation.RowTint(row)
-	return ROW_TINT[row and row.kind] or ROW_TINT.perk
+	local key = RowPresentation.ProgressSemantic(row)
+	return SEMANTIC_TINT[key] or SEMANTIC_TINT.neutral
 end
 
 function RowPresentation.MinHeight(row)
@@ -42,33 +91,19 @@ function RowPresentation.TitleColor(row)
 	if not row then
 		return 1, 1, 1
 	end
-	if row.kind == "perk" then
-		if PL.RowProgress.IsEarned(row) then
-			return 1, 0.82, 0
-		end
-		if row.isMajorPerk then
-			return 1, 0.72, 0.35
-		end
-		return 0.82, 0.82, 0.82
-	end
-	if PL.RowProgress.IsCompleted(row) then
-		return 0.45, 1, 0.45
-	end
-	if row.kind == "tab" then
-		return 1, 0.82, 0
-	end
-	return 1, 1, 1
+	local r, g, b = RowPresentation.ProgressColor(row)
+	return r, g, b
 end
 
 function RowPresentation.BadgeColor(row)
-	if not row or row.kind ~= "perk" then
+	if not row then
 		return nil
 	end
-	if PL.RowProgress.IsEarned(row) then
-		return 0.45, 1, 0.45
+	if row.kind == "perk" then
+		return RowPresentation.TitleColor(row)
 	end
-	if row.isMajorPerk then
-		return 1, 0.72, 0.35
+	if row.kind == "path" and RowPresentation.PathRankBadge(row) then
+		return RowPresentation.TitleColor(row)
 	end
-	return 0.55, 0.78, 1
+	return nil
 end

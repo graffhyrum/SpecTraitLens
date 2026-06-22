@@ -1,10 +1,48 @@
-local PL = _G.PerkLens
+local PTS = _G.ProfessionTraitSearch
 
 local SpecIndex = {}
-PL.SpecIndex = SpecIndex
+PTS.SpecIndex = SpecIndex
 
-local PATH_COMPLETED = Enum and Enum.ProfessionsSpecPathState and Enum.ProfessionsSpecPathState.Completed or 3
-local PERK_EARNED = Enum and Enum.ProfessionsSpecPerkState and Enum.ProfessionsSpecPerkState.Earned or 3
+local PATH_LOCKED = Enum and Enum.ProfessionsSpecPathState and Enum.ProfessionsSpecPathState.Locked or 0
+local PATH_PROGRESSING = Enum and Enum.ProfessionsSpecPathState and Enum.ProfessionsSpecPathState.Progressing or 1
+local PATH_COMPLETED = Enum and Enum.ProfessionsSpecPathState and Enum.ProfessionsSpecPathState.Completed or 2
+local PERK_EARNED = Enum and Enum.ProfessionsSpecPerkState and Enum.ProfessionsSpecPerkState.Earned or 2
+
+local function pathIsAccessible(configID, pathID, pathState)
+	if pathState == PATH_COMPLETED then
+		return false
+	end
+	if pathState == PATH_LOCKED then
+		local unlockEntry = C_ProfSpecs.GetUnlockEntryForPath(pathID)
+		return unlockEntry and C_Traits.CanPurchaseRank(configID, pathID, unlockEntry)
+	end
+	if pathState == PATH_PROGRESSING then
+		local spendEntry = C_ProfSpecs.GetSpendEntryForPath(pathID)
+		return spendEntry and C_Traits.CanPurchaseRank(configID, pathID, spendEntry)
+	end
+	return false
+end
+
+local function markNextPerk(perkRows, parentRank)
+	local nextPerkID
+	local sorted = {}
+	for i = 1, #perkRows do
+		sorted[i] = perkRows[i]
+	end
+	table.sort(sorted, function(a, b)
+		return (a.unlockRank or 0) < (b.unlockRank or 0)
+	end)
+	for i = 1, #sorted do
+		if not sorted[i].isEarned then
+			nextPerkID = sorted[i].perkID
+			break
+		end
+	end
+	for i = 1, #perkRows do
+		perkRows[i].parentPathRank = parentRank
+		perkRows[i].isNextPerk = perkRows[i].perkID == nextPerkID
+	end
+end
 
 local function firstLine(text)
 	if not text or text == "" then
@@ -85,8 +123,10 @@ local function walkPath(rows, configID, skillLineID, tabTreeID, pathID, tabName,
 		searchableText = searchableText .. "\n" .. table.concat(perkDescParts, "\n")
 	end
 
-	local currRank, maxRanks = PL.RankUtil.GetDisplayRanks(configID, pathID, nodeInfo)
+	local currRank, maxRanks = PTS.RankUtil.GetDisplayRanks(configID, pathID, nodeInfo)
 	local pathState = C_ProfSpecs.GetStateForPath(pathID, configID)
+
+	markNextPerk(perkRows, currRank)
 
 	rows[#rows + 1] = {
 		kind = "path",
@@ -105,6 +145,7 @@ local function walkPath(rows, configID, skillLineID, tabTreeID, pathID, tabName,
 		maxRanks = maxRanks,
 		sourceText = C_ProfSpecs.GetSourceTextForPath(pathID, configID),
 		isCompleted = pathState == PATH_COMPLETED,
+		isAccessible = pathIsAccessible(configID, pathID, pathState),
 	}
 
 	for i = 1, #perkRows do

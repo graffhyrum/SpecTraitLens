@@ -5,7 +5,7 @@ local M = {}
 local loaded = {}
 
 local function root()
-	return os.getenv("PL_ROOT") or "."
+	return os.getenv("PTS_ROOT") or "."
 end
 
 local function loadfile_at(path)
@@ -20,7 +20,7 @@ function M.reset()
 	wow_api.reset()
 	wow_api.install()
 	loaded = {}
-	_G.PerkLens = nil
+	_G.ProfessionTraitSearch = nil
 	for key in pairs(package.loaded) do
 		if key:match("^core/") or key:match("^ui/") or key:match("^Tests%.") then
 			package.loaded[key] = nil
@@ -45,16 +45,18 @@ function M.load_core()
 	M.load("core/ProfessionContext.lua")
 	M.load("core/RankUtil.lua")
 	M.load("core/RowProgress.lua")
+	M.load("core/RowAvailability.lua")
 	M.load("core/RowDisplay.lua")
 	M.load("core/RowPresentation.lua")
 	M.load("core/SpecIndex.lua")
 	M.load("core/SpecSearch.lua")
+	M.load("core/SpecFold.lua")
 	M.load("core/SpecNavigation.lua")
-	M.load("core/Controller.lua", "PerkLens")
+	M.load("core/Controller.lua", "ProfessionTraitSearch")
 end
 
-function M.pl()
-	return _G.PerkLens
+function M.pts()
+	return _G.ProfessionTraitSearch
 end
 
 return M

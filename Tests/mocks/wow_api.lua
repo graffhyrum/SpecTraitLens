@@ -48,6 +48,7 @@ local traits = {
 	},
 	unlockEntry = { [301] = 901, [302] = 902 },
 	spendEntry = { [301] = 911, [302] = 912 },
+	canPurchaseRank = {},
 	entries = {
 		[901] = { maxRanks = 1 },
 		[902] = { maxRanks = 1 },
@@ -130,6 +131,9 @@ function M.install()
 		end,
 		GetDefinitionInfo = function(definitionID)
 			return traits.definitions[definitionID]
+		end,
+		CanPurchaseRank = function(_, pathID)
+			return traits.canPurchaseRank[pathID] == true
 		end,
 	}
 

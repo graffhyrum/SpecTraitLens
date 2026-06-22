@@ -1,10 +1,11 @@
 local addonName = ...
-local PL = _G.PerkLens or {}
-_G.PerkLens = PL
+local PTS = _G.ProfessionTraitSearch or {}
+_G.ProfessionTraitSearch = PTS
 
 local Controller = {}
-PL.Controller = Controller
-PL.ADDON_NAME = addonName
+PTS.Controller = Controller
+PTS.ADDON_NAME = addonName
+PTS.ADDON_ICON = "Interface\\AddOns\\ProfessionTraitSearch\\assets\\pts-icon-512.png"
 
 local context
 local allRows = {}
@@ -38,8 +39,14 @@ local function ensureSavedDB()
 	if SpecTraitLensDB and not PerkLensDB then
 		PerkLensDB = SpecTraitLensDB
 	end
-	PerkLensDB = PerkLensDB or {}
-	return PerkLensDB
+	if PerkLensDB and not ProfessionTraitSearchDB then
+		ProfessionTraitSearchDB = PerkLensDB
+	end
+	if SpecTraitLensDB and not ProfessionTraitSearchDB then
+		ProfessionTraitSearchDB = SpecTraitLensDB
+	end
+	ProfessionTraitSearchDB = ProfessionTraitSearchDB or {}
+	return ProfessionTraitSearchDB
 end
 
 function Controller:GetSavedDB()
@@ -57,6 +64,7 @@ function Controller:GetCharDB()
 			majorPerksOnly = false,
 			unearnedOnly = false,
 			lastSkillLineID = nil,
+			foldCollapsedBySkillLine = {},
 		}
 		db.char[key] = charDB
 	elseif charDB.majorPipsOnly ~= nil and charDB.majorPerksOnly == nil then
@@ -85,12 +93,18 @@ local function filterOptions()
 	}
 end
 
+local function applyVisibleRows()
+	local options = filterOptions()
+	visibleRows = PTS.SpecSearch.Filter(allRows, options)
+	visibleRows = PTS.SpecFold.Filter(visibleRows, allRows, Controller:GetFoldCollapsed())
+end
+
 local function refreshProfessionsFrameForSelection()
 	local charDB = Controller:GetCharDB()
 	if not charDB.lastSkillLineID then
 		return
 	end
-	PL.TradeSkillSession:SyncProfessionFrame(charDB.lastSkillLineID, { openSpecTab = false })
+	PTS.TradeSkillSession:SyncProfessionFrame(charDB.lastSkillLineID, { openSpecTab = false })
 end
 
 local function ensureEventFrame()
@@ -108,7 +122,7 @@ local function ensureEventFrame()
 			return
 		end
 		if event == "TRADE_SKILL_LIST_UPDATE" then
-			if not PL.TradeSkillSession:DataReady() then
+			if not PTS.TradeSkillSession:DataReady() then
 				return
 			end
 			refreshProfessionsFrameForSelection()
@@ -153,23 +167,23 @@ function Controller:RebuildIndex()
 	-- Embedded index mode prefers active profession context (ProfessionsFrame in-game).
 	local preferActive = viewMode == "embedded"
 	local requestedSkillLineID = charDB.lastSkillLineID
-	context = PL.ProfessionContext.ResolveForIndex(charDB, preferActive)
+	context = PTS.ProfessionContext.ResolveForIndex(charDB, preferActive)
 	if context then
 		charDB.lastSkillLineID = context.skillLineID
 	elseif requestedSkillLineID and viewMode == "standalone" then
 		charDB.lastSkillLineID = requestedSkillLineID
 	end
-	allRows = context and PL.SpecIndex.Build(context) or {}
-	visibleRows = PL.SpecSearch.Filter(allRows, filterOptions())
+	allRows = context and PTS.SpecIndex.Build(context) or {}
 	indexDirty = false
+	applyVisibleRows()
 end
 
 function Controller:Refresh()
-	PL.Debounce.After("index", function()
+	PTS.Debounce.After("index", function()
 		if indexDirty then
 			Controller:RebuildIndex()
 		else
-			visibleRows = PL.SpecSearch.Filter(allRows, filterOptions())
+			applyVisibleRows()
 		end
 		fireCallbacks()
 	end)
@@ -194,7 +208,7 @@ function Controller:GetKnowledgeAvailable()
 	if not ctx then
 		return 0
 	end
-	return PL.ProfessionContext.GetKnowledgeAvailable(ctx.skillLineID)
+	return PTS.ProfessionContext.GetKnowledgeAvailable(ctx.skillLineID)
 end
 
 function Controller:SetSearchText(text)
@@ -225,17 +239,96 @@ function Controller:GetUnearnedOnly()
 	return self:GetCharDB().unearnedOnly == true
 end
 
+function Controller:GetFoldCollapsed()
+	local charDB = self:GetCharDB()
+	charDB.foldCollapsedBySkillLine = charDB.foldCollapsedBySkillLine or {}
+	charDB.foldCollapsed = nil
+
+	local ctx = self:GetContext()
+	if not ctx or not ctx.skillLineID then
+		return {}
+	end
+
+	local scoped = charDB.foldCollapsedBySkillLine[ctx.skillLineID]
+	if not scoped then
+		scoped = {}
+		charDB.foldCollapsedBySkillLine[ctx.skillLineID] = scoped
+	end
+	return scoped
+end
+
+function Controller:IsFoldCollapsed(rowKey)
+	return self:GetFoldCollapsed()[rowKey] == true
+end
+
+function Controller:ToggleFold(rowKey)
+	if not rowKey then
+		return
+	end
+	local collapsed = self:GetFoldCollapsed()
+	if collapsed[rowKey] then
+		collapsed[rowKey] = nil
+	else
+		collapsed[rowKey] = true
+	end
+	self:Refresh()
+end
+
+function Controller:IsFullyExpanded()
+	return not next(self:GetFoldCollapsed())
+end
+
+function Controller:ExpandAll()
+	local collapsed = self:GetFoldCollapsed()
+	for key in pairs(collapsed) do
+		collapsed[key] = nil
+	end
+	self:Refresh()
+end
+
+function Controller:CollapseAll()
+	if indexDirty then
+		self:RebuildIndex()
+	end
+	local collapsed = self:GetFoldCollapsed()
+	for k in pairs(collapsed) do
+		collapsed[k] = nil
+	end
+	for i = 1, #allRows do
+		local row = allRows[i]
+		if row.kind == "tab" or row.kind == "path" then
+			collapsed[row.rowKey] = true
+		end
+	end
+	self:Refresh()
+end
+
+function Controller:GetFoldToggleLabel()
+	if self:IsFullyExpanded() then
+		return "Collapse all"
+	end
+	return "Expand all"
+end
+
+function Controller:ToggleFoldAll()
+	if self:IsFullyExpanded() then
+		self:CollapseAll()
+	else
+		self:ExpandAll()
+	end
+end
+
 function Controller:SetSkillLine(skillLineID)
 	self:GetCharDB().lastSkillLineID = skillLineID
-	PL.TradeSkillSession:LoadChildSkillLine(skillLineID)
+	PTS.TradeSkillSession:LoadChildSkillLine(skillLineID)
 	self:InvalidateIndex()
-	if PL.TradeSkillSession:DataReady() then
+	if PTS.TradeSkillSession:DataReady() then
 		self:Refresh()
 	end
 end
 
 function Controller:ListProfessions()
-	return PL.ProfessionContext.ListSpecSkillLines()
+	return PTS.ProfessionContext.ListSpecSkillLines()
 end
 
 function Controller:ApplyFromSaved()
