@@ -2,14 +2,14 @@
 
 # Profession Trait Search
 
-Searchable profession specialization index for WoW retail.
+Searchable specialization index for WoW retail profession spec trees — specializations, sub-specializations, and perks.
 Domain terms: see [UBIQUITOUS_LANGUAGE.md](UBIQUITOUS_LANGUAGE.md) (player-facing vs internal naming).
 
 ## Features
 
 - Tree list of specializations, sub-specializations, and perks with descriptions visible at once
 - Text search (e.g. find Multicraft)
-- Filters: major perks only, unearned only
+- Optional toggles: major perks, unearned (off = show all)
 - Standalone panel (`/pts`) and embedded toggle on the Professions Specializations page
 
 ## Development

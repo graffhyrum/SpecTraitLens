@@ -72,8 +72,8 @@ The tab **root path** (`tabInfo.rootNodeID`, path layer `Root`) is the unlock/sp
 
 | Player label | Internal | Blizzard state |
 |--------------|----------|----------------|
-| Major perks only | `majorPerksOnly` | `isMajorPerk` |
-| Unearned only | `unearnedOnly` | `ProfessionsSpecPerkState.Unearned`, incomplete paths |
+| Major perks | `majorPerksOnly` | `isMajorPerk` |
+| Unearned | `unearnedOnly` | `ProfessionsSpecPerkState.Unearned`, incomplete paths |
 | Earned | `isEarned` | `ProfessionsSpecPerkState.Earned` |
 | Completed | `isCompleted` | `ProfessionsSpecPathState.Completed` |
 
@@ -93,7 +93,7 @@ List row colors (internal only): earned = green, next perk = blue, spendable/unl
 > **Domain expert:** "Both. **Searchable text** on a **Path** rolls up perk descriptions, so a **Sub-specialization** can match without its title saying Multicraft. Hits still **promote** ancestor **Specializations** for context."
 > **Dev:** "Player-facing copy for the Professions side tab?"
 > **Domain expert:** "**Specialization index** or **Profession Trait Search** — not 'Trait Index'. The rows already show Blizzard names like **Meticulous Mining** and **Seams**; we don't label them Tab or Path in the UI."
-> **Dev:** "**Major perks only** plus **Unearned only** — still Blizzard-aligned?"
+> **Dev:** "**Major perks** plus **Unearned** toggles — still Blizzard-aligned?"
 > **Domain expert:** "Yes. **Perk** matches `C_ProfSpecs` and `ProfessionsSpecPerkState`; **Unearned** matches `ProfessionsSpecPerkState`."
 
 ## Flagged ambiguities

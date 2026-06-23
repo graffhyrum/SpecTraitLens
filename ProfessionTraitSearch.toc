@@ -2,7 +2,7 @@
 
 ## Title: Profession Trait Search
 
-## Notes: Searchable profession specialization trait browser.
+## Notes: Search specializations, sub-specializations, and perks in profession spec trees.
 
 ## Author: graffhyrum
 

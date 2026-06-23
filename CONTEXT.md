@@ -54,4 +54,4 @@ _Avoid in UI_: points (unless Blizzard does)
 > → Open `/pts` or the **Specialization index** on the Professions **Specializations** page; type `Multicraft`; matching sub-specializations and perks appear with parent context.
 
 > "Show only major perks I haven't earned yet."
-> → Enable **Major perks only** + **Unearned only**.
+> → Enable **Major perks** + **Unearned** toggles.
