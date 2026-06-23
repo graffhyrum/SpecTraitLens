@@ -1,5 +1,11 @@
 # profession-trait-search
 
+## 1.0.2
+
+### Patch Changes
+
+- Wire CurseForge project ID for packager uploads.
+
 ## 1.0.1
 
 ### Patch Changes

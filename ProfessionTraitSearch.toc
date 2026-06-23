@@ -8,7 +8,9 @@
 
 ## Category-enUS: Professions
 
-## Version: 1.0.1
+## X-Curse-Project-ID: 1584836
+
+## Version: 1.0.2
 
 ## SavedVariables: ProfessionTraitSearchDB
 
